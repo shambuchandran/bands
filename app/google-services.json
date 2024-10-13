@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "843282241267",
+    "project_id": "bands-d1bc1",
+    "storage_bucket": "bands-d1bc1.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:843282241267:android:42d0675c1e309977398986",
+        "android_client_info": {
+          "package_name": "com.example.bands"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBDdNCekO87oYLbYiK5-N6GGadg9Bxi7MY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

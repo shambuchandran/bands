@@ -81,7 +81,6 @@ fun SingleChatScreen(
 
     LaunchedEffect(key1 = Unit) {
         viewModel.loadMessages(chatId)
-        callViewModel.init(mainUser?.phoneNumber!!)
     }
     BackHandler {
         if (callViewModel.isInCall.value) {

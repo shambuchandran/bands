@@ -56,7 +56,7 @@ class BandsViewModel @Inject constructor(
     var db: FirebaseFirestore,
     var storage: FirebaseStorage,
      @ApplicationContext val context: Context
-) : ViewModel() {
+) : ViewModel(){
     var inProgress = mutableStateOf(false)
     var inProgressChats = mutableStateOf(false)
     var eventMutableState = mutableStateOf<Event<String>?>(null)
@@ -90,8 +90,6 @@ class BandsViewModel @Inject constructor(
                 getUserData(it)
             }
         }
-
-
     }
 
 

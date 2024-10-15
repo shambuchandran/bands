@@ -4,9 +4,11 @@ import android.annotation.SuppressLint
 import android.app.Application
 import android.util.Log
 import android.widget.Toast
+import androidx.compose.runtime.mutableStateOf
 import androidx.core.view.isVisible
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.bands.data.ChatData
 import com.example.bands.data.IceCandidateModel
 import com.example.bands.data.MessageModel
 import com.example.bands.socket.SocketRepository
@@ -17,6 +19,8 @@ import com.google.gson.Gson
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -25,6 +29,7 @@ import org.webrtc.MediaStream
 import org.webrtc.PeerConnection
 import org.webrtc.SessionDescription
 import org.webrtc.SurfaceViewRenderer
+import org.webrtc.VideoTrack
 import javax.inject.Inject
 
 @SuppressLint("StaticFieldLeak")
@@ -43,6 +48,8 @@ class CallViewModel @Inject constructor(
     val incomingCallerSession: MutableStateFlow<MessageModel?> = MutableStateFlow(null)
     private val _isInCall = MutableStateFlow(false)
     val isInCall: StateFlow<Boolean> get() = _isInCall
+    private var cachedRemoteVideoTrack: VideoTrack? = null
+    val chats = mutableStateOf<List<ChatData>>(listOf())
 
     fun setLocalSurface(view: SurfaceViewRenderer){
         this.localSurfaceViewRenderer= view
@@ -50,8 +57,9 @@ class CallViewModel @Inject constructor(
     }
     fun setRemoteSurface(view: SurfaceViewRenderer){
         this.remoteSurfaceViewRenderer=view
-        view?.let {
+        view.let {
             rtcClient?.initSurfaceView(it, false)
+            attachRemoteVideoIfAvailable()
         }
     }
     fun startLocalVideo() {
@@ -66,6 +74,7 @@ class CallViewModel @Inject constructor(
         rtcClient= RTCClient(application,username,socketRepository,object :PeerConnectionObserver(){
             override fun onIceCandidate(p0: IceCandidate?) {
                 super.onIceCandidate(p0)
+                _isInCall.value=true
                 rtcClient?.addIceCandidate(p0)
                 val candidate = hashMapOf(
                     "sdpMid" to p0?.sdpMid,
@@ -91,40 +100,58 @@ class CallViewModel @Inject constructor(
                 }
             }
 
+
             override fun onAddStream(p0: MediaStream?) {
                 super.onAddStream(p0)
+                _isInCall.value=true
+                cachedRemoteVideoTrack = p0?.videoTracks?.get(0)
+                attachRemoteVideoIfAvailable()
+
                 //p0?.videoTracks?.get(0)?.addSink(remoteSurfaceViewRenderer)
-                viewModelScope.launch { _isInCall.emit(true) }
-                p0?.videoTracks?.get(0)?.let { videoTrack ->
-                    Log.d("RTCClient", "Remote video track found")
-                    remoteSurfaceViewRenderer?.let { renderer ->
-                        videoTrack.addSink(renderer)
-                    } ?: run {
-                        Log.e("onAddStream", "remoteSurfaceViewRenderer is null")
-                    }
-                } ?: run {
-                    Log.e("onAddStream", "No video track available in the stream")
-                }
+//                    p0?.videoTracks?.get(0)?.let { videoTrack ->
+//                        Log.d("onAddStream", "Remote video track found")
+//                        remoteSurfaceViewRenderer?.let { renderer ->
+//                            videoTrack.addSink(renderer)
+//                        } ?: run {
+//                            Log.e("onAddStream", "remoteSurfaceViewRenderer is null")
+//                        }
+//                    } ?: run {
+//                        Log.e("onAddStream", "No video track available in the stream")
+//                    }
+
             }
 
         })
-//        rtcClient?.initSurfaceView(localSurfaceViewRenderer!!)
-//        rtcClient?.initSurfaceView(remoteSurfaceViewRenderer!!)
-//        rtcClient?.startLocalVideo(localSurfaceViewRenderer!!)
+        //rtcClient?.initSurfaceView(localSurfaceViewRenderer!!,true)
+        //rtcClient?.initSurfaceView(remoteSurfaceViewRenderer!!,false)
+        //rtcClient?.startLocalVideo(localSurfaceViewRenderer!!)
+    }
+
+    private fun attachRemoteVideoIfAvailable() {
+        remoteSurfaceViewRenderer?.let { renderer ->
+            cachedRemoteVideoTrack?.let { videoTrack ->
+                Log.d("RemoteVideo", "Attaching remote video track to renderer.")
+                videoTrack.addSink(renderer)
+                cachedRemoteVideoTrack = null
+                Log.d("RemoteVideo", "Remote video track attached successfully.")
+            }
+        }
     }
 
 
     fun startCall(target:String){
+        _isInCall.value=true
         this.target =target
         socketRepository.sendMessageToSocket(
             MessageModel(
             "start_call",username,target,null
         )
         )
-        _isInCall.value=true
+
     }
 
     fun acceptCall(){
+        _isInCall.value = true
         val session =SessionDescription(
             SessionDescription.Type.OFFER,
             incomingCallerSession.value?.data.toString()
@@ -136,12 +163,13 @@ class CallViewModel @Inject constructor(
         viewModelScope.launch {
             incomingCallerSession.emit(null)
         }
-        _isInCall.value = true
     }
     fun rejectCall(){
         viewModelScope.launch {
             incomingCallerSession.emit(null)
+            _isInCall.emit(false)
         }
+
     }
     fun audioButtonClicked(boolean: Boolean) {
         rtcClient?.toggleAudio(boolean)
@@ -164,8 +192,8 @@ class CallViewModel @Inject constructor(
         localSurfaceViewRenderer?.apply {
             release()
             clearImage()
+            _isInCall.value = false
         }
-        _isInCall.value = false
     }
 
     override fun onCleared() {

@@ -30,7 +30,6 @@ class RTCClient(
 
     init {
         initPeerConnectionFactory(application)
-
     }
     private val eglContext=EglBase.create()
     private val peerConnectionFactory by lazy { createPeerConnectionFactory() }

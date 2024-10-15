@@ -7,6 +7,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -24,6 +25,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import androidx.compose.material.icons.rounded.Call
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -43,6 +45,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -56,6 +59,7 @@ import com.example.bands.di.CallViewModel
 import com.example.bands.utils.CommonDivider
 import com.example.bands.utils.CommonImage
 import com.example.bands.utils.navigateTo
+import org.webrtc.EglBase
 import org.webrtc.SurfaceViewRenderer
 
 
@@ -274,12 +278,15 @@ fun CallView(callViewModel: CallViewModel) {
                     onSwitchCameraClicked = callViewModel::cameraSwitchClicked
                 )
             } else {
-                Text("Initializing call...")
+                Box(
+                    modifier = Modifier.weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
             }
         }
-
     }
-
 }
 
 
@@ -289,11 +296,10 @@ fun SurfaceViewRendererComposable(
     onSurfaceReady:(SurfaceViewRenderer)->Unit
 ) {
     AndroidView(
-        modifier = modifier
-            .fillMaxWidth(),
-        factory = { ctx ->
-            FrameLayout(ctx).apply {
-                addView(SurfaceViewRenderer(ctx).also {
+        modifier = modifier.fillMaxWidth(),
+        factory = { context  ->
+            FrameLayout(context).apply {
+                addView(SurfaceViewRenderer(context).also {
                     onSurfaceReady.invoke(it)
                 })
             }
@@ -311,14 +317,13 @@ fun ControlButtonsLayout(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .wrapContentHeight()
             .background(
                 color = Color.LightGray,
                 shape = RoundedCornerShape(16.dp)
             )
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center
+        horizontalArrangement = Arrangement.SpaceEvenly
     ) {
 
         val audioState = remember { mutableStateOf(true) }
@@ -329,18 +334,10 @@ fun ControlButtonsLayout(
         IconButton(onClick = {
             audioState.value = !audioState.value
         }) {
-            Image(
-                painter = painterResource(
-                    if (audioState.value) R.drawable.baseline_mic_24
-                    else R.drawable.baseline_mic_off_24
-                ),
-                contentDescription = "Mic",
-                modifier = Modifier
-                    .padding(5.dp)
-                    .background(
-                        color = Color.DarkGray,
-                        shape = RoundedCornerShape(70)
-                    )
+            Icon(
+                painter = if (audioState.value) painterResource(id = R.drawable.baseline_mic_24) else painterResource(id = R.drawable.baseline_mic_off_24),
+                contentDescription = "Toggle Audio",
+                tint = if (audioState.value) Color.Black else Color.Red
             )
         }
 
@@ -351,47 +348,27 @@ fun ControlButtonsLayout(
         IconButton(onClick = {
             cameraSate.value = !cameraSate.value
         }) {
-            Image(
-                painter = painterResource(
-                    if (cameraSate.value) R.drawable.baseline_videocam_24
-                    else R.drawable.baseline_videocam_off_24
-                ),
-                contentDescription = "Video",
-                modifier = Modifier
-                    .padding(5.dp)
-                    .background(
-                        color = Color.DarkGray,
-                        shape = RoundedCornerShape(70)
-                    )
+            Icon(
+                painter = if (cameraSate.value) painterResource(id = R.drawable.baseline_videocam_24) else painterResource(id = R.drawable.baseline_videocam_off_24),
+                contentDescription = "Toggle Video",
+                tint = if (cameraSate.value) Color.Black else Color.Red
             )
         }
 
         IconButton(onClick = { onEndCallClicked.invoke()
         }) {
-            Image(
+            Icon(
                 painter = painterResource(id = R.drawable.baseline_call_end_24),
-                contentDescription = "End Call",
-                modifier = Modifier
-                    .padding(5.dp)
-                    .background(
-                        color = Color.Red,
-                        shape = RoundedCornerShape(70)
-                    )
+                contentDescription = "End Call"
             )
         }
 
         IconButton(onClick = { onSwitchCameraClicked.invoke() }) {
-            Image(
+            Icon(
                 painter = painterResource(id = R.drawable.baseline_cameraswitch_24),
                 contentDescription = "Switch Camera",
-                modifier = Modifier
-                    .padding(5.dp)
-                    .background(
-                        color = Color.DarkGray,
-                        shape = RoundedCornerShape(70)
-                    )
+                Modifier.background(Color.LightGray)
             )
         }
     }
 }
-

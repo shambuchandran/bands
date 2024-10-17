@@ -33,12 +33,31 @@ class RTCClient(
     }
     private val eglContext=EglBase.create()
     private val peerConnectionFactory by lazy { createPeerConnectionFactory() }
-    private val iceServer = listOf(
-        PeerConnection.IceServer.builder("stun:iphone-stun.strato-iphone.de:3478").createIceServer(),
-        PeerConnection.IceServer("stun:openrelay.metered.ca:80"),
-        PeerConnection.IceServer("turn:openrelay.metered.ca:80","openrelayproject","openrelayproject"),
-        PeerConnection.IceServer("turn:openrelay.metered.ca:443","openrelayproject","openrelayproject"),
-        PeerConnection.IceServer("turn:openrelay.metered.ca:443?transport=tcp","openrelayproject","openrelayproject"),)
+//    private val iceServer = listOf(
+//        PeerConnection.IceServer.builder("stun:iphone-stun.strato-iphone.de:3478").createIceServer(),
+//        PeerConnection.IceServer("stun:openrelay.metered.ca:80"),
+//        PeerConnection.IceServer("turn:openrelay.metered.ca:80","openrelayproject","openrelayproject"),
+//        PeerConnection.IceServer("turn:openrelay.metered.ca:443","openrelayproject","openrelayproject"),
+//        PeerConnection.IceServer("turn:openrelay.metered.ca:443?transport=tcp","openrelayproject","openrelayproject"),)
+    private val iceServer= listOf(
+    PeerConnection.IceServer.builder("stun:stun.relay.metered.ca:80").createIceServer(),
+    PeerConnection.IceServer.builder("turn:global.relay.metered.ca:80")
+        .setUsername("9413fdb2cc64ea912deaa464")
+        .setPassword("6aOOsT45M6b4AkH+")
+        .createIceServer(),
+    PeerConnection.IceServer.builder("turn:global.relay.metered.ca:80?transport=tcp")
+        .setUsername("9413fdb2cc64ea912deaa464")
+        .setPassword("6aOOsT45M6b4AkH+")
+        .createIceServer(),
+    PeerConnection.IceServer.builder("turn:global.relay.metered.ca:443")
+        .setUsername("9413fdb2cc64ea912deaa464")
+        .setPassword("6aOOsT45M6b4AkH+")
+        .createIceServer(),
+    PeerConnection.IceServer.builder("turns:global.relay.metered.ca:443?transport=tcp")
+        .setUsername("9413fdb2cc64ea912deaa464")
+        .setPassword("6aOOsT45M6b4AkH+")
+        .createIceServer()
+    )
 
     private val peerConnection by lazy { createPeerConnectionFactory(observer) }
     private val localVideoSource by lazy { peerConnectionFactory.createVideoSource(false) }

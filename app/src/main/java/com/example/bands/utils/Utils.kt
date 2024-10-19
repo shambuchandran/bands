@@ -4,12 +4,14 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.CircularProgressIndicator
@@ -94,9 +96,27 @@ fun CommonRow(imageUrl: String?, name: String?, onItemClick: () -> Unit) {
         Text(text = name?:"---", fontWeight = FontWeight.Bold,modifier = Modifier
             .padding(start = 4.dp))
     }
-
-
 }
+@Composable
+fun CommonStatus(imageUrl: String?, name: String?, onItemClick: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .padding(2.dp)
+            .width(72.dp)
+            .height(100.dp)
+            .clickable { onItemClick.invoke() },
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        CommonImage(data = imageUrl, modifier = Modifier
+            .padding(8.dp)
+            .size(54.dp)
+            .clip(CircleShape)
+            .background(Color.Gray))
+        Text(text = name?:"---", fontWeight = FontWeight.Bold,modifier = Modifier
+            .padding(start = 4.dp))
+    }
+}
+
 
 @Composable
 fun CommonProgressBar() {

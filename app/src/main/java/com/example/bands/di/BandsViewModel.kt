@@ -498,7 +498,9 @@ class BandsViewModel @Inject constructor(
 
     fun loadStatuses() {
         val statusShowTime = 24L * 60 * 60 * 1000
+        Log.d("statusShowTime",statusShowTime.toString())
         val timeFrame = System.currentTimeMillis() - statusShowTime
+        Log.d("timeFrame",timeFrame.toString())
         inProgressStatus.value = true
         db.collection(CHATS)
             .where(
@@ -522,7 +524,9 @@ class BandsViewModel @Inject constructor(
                         } else {
                             currentConnection.add(chat.user1.userId)
                         }
-                        db.collection(STATUS).whereGreaterThan("timeStamp", timeFrame)
+                        Log.d("current",currentConnection.toString())
+                        db.collection(STATUS)
+                            //.whereGreaterThan("timeStamp", timeFrame)
                             .whereIn("user.userId", currentConnection)
                             .addSnapshotListener { value, error ->
                                 if (error != null) {
@@ -532,7 +536,8 @@ class BandsViewModel @Inject constructor(
                                 }
                                 if (value != null) {
                                     //status.value = value.toObjects()
-                                    _status.update { value.toObjects() }
+                                    _status.update { value.toObjects<Status>() }
+                                    Log.d("sts",_status.toString())
                                     inProgressStatus.value = false
                                 }
                             }
@@ -544,12 +549,14 @@ class BandsViewModel @Inject constructor(
 
     }
 
-    fun removeStatus(index: Int) {
-        if (index in _status.value.indices) {
-            val selectedStatus = _status.value[index]
+    fun removeStatus(userId: String,index: Int) {
+        val userStatuses = _status.value.filter { it.user.userId == userId }
+        if (index in userStatuses.indices) {
+            val selectedStatus = userStatuses[index]
             deleteStatusFromFirebase(selectedStatus)
             _status.value = _status.value.toMutableList().apply {
-                removeAt(index)
+                //removeAt(index)
+                remove(selectedStatus)
             }
         }
     }

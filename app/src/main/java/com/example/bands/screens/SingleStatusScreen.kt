@@ -40,6 +40,7 @@ fun SingleStatusScreen(
     val statuses = viewModel.status.collectAsState().value.filter {
         it.user.userId == userId
     }
+    val currentUser = viewModel.userData.value
     if (statuses.isNotEmpty()) {
         var currentStatus by remember {
             mutableStateOf(0)
@@ -79,10 +80,13 @@ fun SingleStatusScreen(
 //                    }
                 }
             }
-            Button(onClick = {viewModel.removeStatus(currentStatus)
-                if (currentStatus>=statuses.size-1) navController.popBackStack()
-            },modifier = Modifier.padding(16.dp)) {
-                Text("Delete")
+            if (currentUser?.userId == userId) {
+                Button(onClick = {
+                    viewModel.removeStatus(userId = currentUser.userId!!,currentStatus)
+                    if (currentStatus >= statuses.size - 1) navController.popBackStack()
+                }, modifier = Modifier.padding(16.dp)) {
+                    Text("Delete")
+                }
             }
         }
     }

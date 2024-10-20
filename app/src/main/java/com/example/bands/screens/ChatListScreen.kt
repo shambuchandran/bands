@@ -1,6 +1,5 @@
 package com.example.bands.screens
 
-import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -30,12 +29,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.example.bands.DestinationScreen
 import com.example.bands.di.BandsViewModel
+import com.example.bands.di.CallViewModel
 import com.example.bands.utils.CommonProgressBar
 import com.example.bands.utils.CommonRow
 import com.example.bands.utils.CommonTitleText
-import com.example.bands.DestinationScreen
-import com.example.bands.di.CallViewModel
 import com.example.bands.utils.navigateTo
 
 @Composable

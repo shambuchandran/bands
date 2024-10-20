@@ -76,6 +76,7 @@ fun SingleChatScreen(
     val chatUser = if (mainUser?.userId == currentChat.user1.userId) currentChat.user2 else currentChat.user1
     val chatMessages = viewModel.chatMessages
     val isInCall = callViewModel.isInCall.collectAsState()
+    val isAudioCall= callViewModel.isAudioCall.collectAsState()
 
 
     LaunchedEffect(key1 = Unit) {
@@ -91,7 +92,14 @@ fun SingleChatScreen(
 
     Column(modifier = Modifier.fillMaxSize()) {
         if (isInCall.value) {
-            CallView(callViewModel = callViewModel)
+            //CallView(callViewModel = callViewModel)
+            if (isAudioCall.value) {
+                // Show Audio Call Screen
+                AudioCallScreen(callViewModel = callViewModel, receiverName = chatUser.name ?: "")
+            } else {
+                // Show Video Call Screen
+                CallView(callViewModel = callViewModel)
+            }
         } else {
             ChatHeader(
                 name = chatUser.name ?: "",
@@ -106,7 +114,12 @@ fun SingleChatScreen(
                 onStartCallButtonClicked = {
                     callViewModel.startCall(chatUser.phoneNumber!!)
                     Log.d("chatUser.phoneNumber",chatUser.phoneNumber)
-                })
+                },
+                onStartAudioCallButtonClicked = {
+                    callViewModel.startAudioCall(chatUser.phoneNumber!!)
+                    Log.d("AudioCall", "Started audio call with ${chatUser.phoneNumber}")
+                }
+                )
             MessageBox(
                 modifier = Modifier
                     .weight(1f)
@@ -154,7 +167,7 @@ fun ReplyBox(reply: String, onReplyChange: (String) -> Unit, onSendReply: () -> 
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
-            .background(colorResource(id =  R . color . BgColor))
+            .background(colorResource(id = R.color.BgColor))
     ) {
         Row(
             Modifier
@@ -201,13 +214,13 @@ fun ReplyBox(reply: String, onReplyChange: (String) -> Unit, onSendReply: () -> 
 }
 
 @Composable
-fun ChatHeader(name: String, imageUrl: String, onBacKClicked: () -> Unit,onStartCallButtonClicked:() -> Unit) {
+fun ChatHeader(name: String, imageUrl: String, onBacKClicked: () -> Unit,onStartCallButtonClicked:() -> Unit,onStartAudioCallButtonClicked: () -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
             .height(88.dp)
             .clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
-            .background(colorResource(id =  R . color . BgColor)),
+            .background(colorResource(id = R.color.BgColor)),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
@@ -245,7 +258,7 @@ fun ChatHeader(name: String, imageUrl: String, onBacKClicked: () -> Unit,onStart
                 Icons.Rounded.Call,
                 contentDescription = "audioCall",
                 Modifier
-                    .clickable { }
+                    .clickable { onStartAudioCallButtonClicked.invoke() }
                     .size(50.dp)
                     .padding(end = 8.dp)
             )
@@ -298,7 +311,8 @@ fun CallView(callViewModel: CallViewModel) {
                     onAudioButtonClicked = callViewModel::audioButtonClicked,
                     onCameraButtonClicked = callViewModel::videoButtonClicked,
                     onEndCallClicked = callViewModel::onEndClicked,
-                    onSwitchCameraClicked = callViewModel::cameraSwitchClicked
+                    onSwitchCameraClicked = callViewModel::cameraSwitchClicked,
+                    isAudioCall = false
                 )
             } else {
                 Box(
@@ -336,12 +350,13 @@ fun ControlButtonsLayout(
     onCameraButtonClicked: (Boolean) -> Unit,
     onEndCallClicked: () -> Unit,
     onSwitchCameraClicked: () -> Unit,
+    isAudioCall: Boolean
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
             .background(
-                color = Color.LightGray,
+                color = Color(0x80FFFFFF),
                 shape = RoundedCornerShape(16.dp)
             )
             .padding(12.dp),
@@ -368,14 +383,18 @@ fun ControlButtonsLayout(
         LaunchedEffect(key1 = cameraSate.value, block = {
             onCameraButtonClicked.invoke(cameraSate.value)
         })
-        IconButton(onClick = {
-            cameraSate.value = !cameraSate.value
-        }) {
-            Icon(
-                painter = if (cameraSate.value) painterResource(id = R.drawable.baseline_videocam_24) else painterResource(id = R.drawable.baseline_videocam_off_24),
-                contentDescription = "Toggle Video",
-                tint = if (cameraSate.value) Color.Black else Color.Red
-            )
+        if (!isAudioCall) {
+            IconButton(onClick = {
+                cameraSate.value = !cameraSate.value
+            }) {
+                Icon(
+                    painter = if (cameraSate.value) painterResource(id = R.drawable.baseline_videocam_24) else painterResource(
+                        id = R.drawable.baseline_videocam_off_24
+                    ),
+                    contentDescription = "Toggle Video",
+                    tint = if (cameraSate.value) Color.Black else Color.Red
+                )
+            }
         }
 
         IconButton(onClick = { onEndCallClicked.invoke()
@@ -386,12 +405,13 @@ fun ControlButtonsLayout(
             )
         }
 
-        IconButton(onClick = { onSwitchCameraClicked.invoke() }) {
-            Icon(
-                painter = painterResource(id = R.drawable.baseline_cameraswitch_24),
-                contentDescription = "Switch Camera",
-                Modifier.background(Color.LightGray)
-            )
+        if (!isAudioCall) {
+            IconButton(onClick = { onSwitchCameraClicked.invoke() }) {
+                Icon(
+                    painter = painterResource(id = R.drawable.baseline_cameraswitch_24),
+                    contentDescription = "Switch Camera"
+                )
+            }
         }
     }
 }

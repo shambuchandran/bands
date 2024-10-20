@@ -20,6 +20,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.webrtc.IceCandidate
 import org.webrtc.MediaStream
@@ -44,8 +45,11 @@ class CallViewModel @Inject constructor(
     private var target: String = ""
     val incomingCallerSession: MutableStateFlow<MessageModel?> = MutableStateFlow(null)
     private val _isInCall = MutableStateFlow(false)
-    val isInCall: StateFlow<Boolean> get() = _isInCall
+    val isInCall: StateFlow<Boolean> = _isInCall.asStateFlow()
     private var cachedRemoteVideoTrack: VideoTrack? = null
+
+    private val _isAudioCall = MutableStateFlow(false)
+    val isAudioCall: StateFlow<Boolean> = _isAudioCall
 
     fun init(username: String) {
         this.username = username
@@ -144,6 +148,12 @@ class CallViewModel @Inject constructor(
         }
     }
 
+    fun startAudioCall(phoneNumber: String) {
+        _isInCall.value = true
+        _isAudioCall.value = true
+        rtcClient?.startAudioCall(phoneNumber)
+    }
+
     fun startCall(target: String) {
         _isInCall.value = true
         if (rtcClient == null) {
@@ -162,28 +172,55 @@ class CallViewModel @Inject constructor(
         }
     }
 
-    fun acceptCall() {
-        _isInCall.value = true
-        if (rtcClient == null) {
-            init(username!!)
-        }
-        val session = SessionDescription(
-            SessionDescription.Type.OFFER,
-            incomingCallerSession.value?.data.toString()
-        )
-        Log.d("CallViewModel", "Accepted call with SDP: ${session.description}")
-        rtcClient?.onRemoteSessionReceived(session)
-        rtcClient?.answer(incomingCallerSession.value?.name!!)
-        target = incomingCallerSession.value?.name!!
-        viewModelScope.launch {
-            incomingCallerSession.emit(null)
-        }
+//    fun acceptCall() {
+//        _isInCall.value = true
+//        if (rtcClient == null) {
+//            init(username!!)
+//        }
+//        val session = SessionDescription(
+//            SessionDescription.Type.OFFER,
+//            incomingCallerSession.value?.data.toString()
+//        )
+//        Log.d("CallViewModel", "Accepted call with SDP: ${session.description}")
+//        rtcClient?.onRemoteSessionReceived(session)
+//        rtcClient?.answer(incomingCallerSession.value?.name!!)
+//        target = incomingCallerSession.value?.name!!
+//        viewModelScope.launch {
+//            incomingCallerSession.emit(null)
+//        }
+//    }
+fun acceptCall(isAudioCall: Boolean = false) {
+    _isInCall.value = true
+    if (rtcClient == null) {
+        init(username!!)
     }
+
+    val session = SessionDescription(
+        SessionDescription.Type.OFFER,
+        incomingCallerSession.value?.data.toString()
+    )
+    Log.d("CallViewModel", "Accepted call with SDP: ${session.description}")
+    rtcClient?.onRemoteSessionReceived(session)
+
+    if (isAudioCall) {
+        rtcClient?.startAudioCall(incomingCallerSession.value?.name!!)
+        Log.d("CallViewModel", "Accepted audio call from ${incomingCallerSession.value?.name}")
+    } else {
+        rtcClient?.answer(incomingCallerSession.value?.name!!)
+        Log.d("CallViewModel", "Accepted video call from ${incomingCallerSession.value?.name}")
+    }
+    target = incomingCallerSession.value?.name!!
+
+    viewModelScope.launch {
+        incomingCallerSession.emit(null)
+    }
+}
 
     fun rejectCall() {
         viewModelScope.launch {
             incomingCallerSession.emit(null)
             _isInCall.emit(false)
+            _isAudioCall.emit(false)
         }
 
     }
@@ -191,6 +228,7 @@ class CallViewModel @Inject constructor(
     fun onEndClicked() {
         rtcClient?.endCall()
         _isInCall.value = false
+        _isAudioCall.value = false
         resetCallState()
         endCallCleanup()
     }

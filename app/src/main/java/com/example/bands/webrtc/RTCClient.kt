@@ -257,4 +257,53 @@ class RTCClient(
         videoCapturer = null
     }
 
+
+    //audioCall
+    fun startAudioCall(target: String) {
+        if (peerConnection == null) {
+            createPeerConnectionFactory(observer)
+        }
+        localAudioTrack = peerConnectionFactory.createAudioTrack("local_audio_track", localAudioSource)
+        val localStream = peerConnectionFactory.createLocalMediaStream("local_audio_stream")
+        localStream.addTrack(localAudioTrack)
+        peerConnection?.addStream(localStream)
+        val mediaConstraints = MediaConstraints().apply {
+            mandatory.add(MediaConstraints.KeyValuePair("offerToReceiveAudio", "true"))
+            mandatory.add(MediaConstraints.KeyValuePair("offerToReceiveVideo", "false")) // Disable video
+        }
+        peerConnection?.createOffer(object : SdpObserver {
+            override fun onCreateSuccess(desc: SessionDescription?) {
+                peerConnection?.setLocalDescription(object : SdpObserver {
+                    override fun onSetSuccess() {
+                        val offer = hashMapOf(
+                            "sdp" to desc?.description,
+                            "type" to desc?.type
+                        )
+                        socketRepository.sendMessageToSocket(
+                            MessageModel("create_audio_offer", username, target, offer)
+                        )
+                    }
+                    override fun onSetFailure(error: String?) {
+                        Log.e("RTCClient", "Failed to set local description for audio call: $error")
+                    }
+                    override fun onCreateSuccess(p0: SessionDescription?) {}
+                    override fun onCreateFailure(p0: String?) {}
+                }, desc)
+            }
+
+            override fun onSetSuccess() {}
+            override fun onCreateFailure(error: String?) {
+                Log.e("RTCClient", "Failed to create audio offer: $error")
+            }
+            override fun onSetFailure(p0: String?) {}
+        }, mediaConstraints)
+    }
+
+//    fun disableVideo() {
+//        localVideoTrack?.setEnabled(false)
+//        localVideoTrack = null
+//        videoCapturer?.stopCapture()
+//        videoCapturer = null
+//    }
+
 }

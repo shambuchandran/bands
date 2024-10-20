@@ -4,6 +4,7 @@ plugins {
     id("com.google.devtools.ksp")
     id ("com.google.dagger.hilt.android")
     id("com.google.gms.google-services")
+    kotlin("plugin.serialization") version "2.0.20"
 }
 
 android {
@@ -109,6 +110,9 @@ dependencies {
 
     implementation ("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.1")
     implementation ("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.2")
+
+    implementation ("com.github.KwabenBerko:News-API-Java:1.0.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
 
 
 }

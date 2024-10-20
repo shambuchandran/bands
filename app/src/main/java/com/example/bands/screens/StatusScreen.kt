@@ -7,7 +7,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -34,10 +33,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.bands.DestinationScreen
 import com.example.bands.di.BandsViewModel
+import com.example.bands.di.NewsViewModel
 import com.example.bands.utils.CommonProgressBar
 import com.example.bands.utils.CommonStatus
 import com.example.bands.utils.CommonTitleText
@@ -45,6 +48,7 @@ import com.example.bands.utils.navigateTo
 
 @Composable
 fun StatusScreen(navController: NavController, viewModel: BandsViewModel) {
+    val newsViewModel = NewsViewModel()
     LaunchedEffect(Unit) {
         viewModel.loadStatuses()
     }
@@ -60,11 +64,11 @@ fun StatusScreen(navController: NavController, viewModel: BandsViewModel) {
         val othersStatus = statuses.filter { it.user.userId != userData?.userId }
 
         val launcher = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri ->
-            uri?.let {
-                viewModel.uploadStatus(uri)
-                viewModel.loadStatuses()
+                uri?.let {
+                    viewModel.uploadStatus(uri)
+                    viewModel.loadStatuses()
+                }
             }
-        }
 
         Scaffold(
             floatingActionButton = {
@@ -84,7 +88,8 @@ fun StatusScreen(navController: NavController, viewModel: BandsViewModel) {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .weight(1f),
+                                //.weight(1f)
+                                .height(108.dp),
                             verticalArrangement = Arrangement.Center,
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
@@ -138,7 +143,10 @@ fun StatusScreen(navController: NavController, viewModel: BandsViewModel) {
                             } else {
                                 item {
                                     Text(
-                                        text = "No status to watch", modifier = Modifier.align(Alignment.CenterHorizontally)
+                                        text = "No status to watch",
+                                        modifier = Modifier
+                                            .align(Alignment.CenterHorizontally)
+                                            .padding(24.dp)
                                     )
                                 }
                             }
@@ -152,7 +160,15 @@ fun StatusScreen(navController: NavController, viewModel: BandsViewModel) {
                         verticalArrangement = Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text(text = "News")
+                        Text(
+                            text = "NEWS TODAY",
+                            modifier = Modifier.align(Alignment.Start),
+                            color = Color.Black,
+                            fontSize = 24.sp,
+                            fontFamily = FontFamily.SansSerif,
+                            fontWeight = FontWeight.Bold
+                        )
+                        NewsSection(newsViewModel, navController)
                     }
 
                     BottomNavigationMenu(
@@ -169,7 +185,7 @@ fun StatusScreen(navController: NavController, viewModel: BandsViewModel) {
 fun AddStatusIcon(onAddClick: () -> Unit) {
     Box(
         modifier = Modifier
-            .size(64.dp)
+            .size(56.dp)
             .clip(CircleShape)
             .background(MaterialTheme.colorScheme.primary)
             .clickable(onClick = onAddClick),
@@ -193,6 +209,7 @@ fun VerticalDivider(modifier: Modifier = Modifier) {
             .height(94.dp)
     )
 }
+
 @Composable
 fun FabStatus(onFabClick: () -> Unit) {
     FloatingActionButton(

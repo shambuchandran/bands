@@ -35,10 +35,12 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.toRoute
 import com.example.bands.di.BandsViewModel
 import com.example.bands.di.CallViewModel
 import com.example.bands.screens.ChatListScreen
 import com.example.bands.screens.LoginScreen
+import com.example.bands.screens.NewsArticleScreen
 import com.example.bands.screens.PhoneAuthScreen
 import com.example.bands.screens.ProfileScreen
 import com.example.bands.screens.SignUpScreen
@@ -49,6 +51,7 @@ import com.example.bands.ui.theme.BandsTheme
 import com.example.bands.utils.navigateTo
 import com.permissionx.guolindev.PermissionX
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.serialization.Serializable
 
 sealed class DestinationScreen(var route: String) {
     object SignUp : DestinationScreen("signup")
@@ -64,6 +67,9 @@ sealed class DestinationScreen(var route: String) {
     object SingleStatus : DestinationScreen("singleStatus/{userId}") {
         fun createRoute(userId: String) = "singleStatus/$userId"
     }
+
+    @Serializable
+    data class NewsArticleScreenRoute(val url: String)
 
 }
 
@@ -137,6 +143,11 @@ class MainActivity : FragmentActivity() {
                         SingleStatusScreen(navController, viewModel, userId = it)
                     }
                 }
+                composable<DestinationScreen.NewsArticleScreenRoute> {
+                    val argument = it.toRoute<DestinationScreen.NewsArticleScreenRoute>()
+                    NewsArticleScreen(argument.url)
+                }
+
             }
             Log.d("IncomingCallComponent", incomingCallState.toString())
             if (incomingCallState.value != null) {

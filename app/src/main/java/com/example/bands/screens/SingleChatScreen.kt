@@ -3,7 +3,6 @@ package com.example.bands.screens
 import android.util.Log
 import android.widget.FrameLayout
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -16,7 +15,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -24,7 +22,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import androidx.compose.material.icons.rounded.Call
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -32,20 +29,20 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -56,10 +53,8 @@ import com.example.bands.R
 import com.example.bands.data.Message
 import com.example.bands.di.BandsViewModel
 import com.example.bands.di.CallViewModel
-import com.example.bands.utils.CommonDivider
 import com.example.bands.utils.CommonImage
 import com.example.bands.utils.navigateTo
-import org.webrtc.EglBase
 import org.webrtc.SurfaceViewRenderer
 
 
@@ -94,7 +89,7 @@ fun SingleChatScreen(
         viewModel.releaseMessages()
     }
 
-    Column {
+    Column(modifier = Modifier.fillMaxSize()) {
         if (isInCall.value) {
             CallView(callViewModel = callViewModel)
         } else {
@@ -113,7 +108,9 @@ fun SingleChatScreen(
                     Log.d("chatUser.phoneNumber",chatUser.phoneNumber)
                 })
             MessageBox(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .background(colorResource(id = R.color.chatBgColor)),
                 chatMessages = chatMessages.value,
                 currentUserId = mainUser?.userId ?: ""
             )
@@ -128,8 +125,9 @@ fun MessageBox(modifier: Modifier, chatMessages: List<Message>, currentUserId: S
     LazyColumn(modifier) {
         items(chatMessages) { Message ->
             val alignment = if (Message.sendBy == currentUserId) Alignment.End else Alignment.Start
-            val color =
-                if (Message.sendBy == currentUserId) Color(0xff68c400) else Color(0xffffc0c0)
+            val color1=0xFFB3D1EA //0xFFB3D1EA ,0xFFA8D5BA
+            val color2=0xFFFFCCAA //0xFFFFCCAA ,0xFFFFB3B3
+            val color = if (Message.sendBy == currentUserId) Color(color1) else Color(color2)
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -139,42 +137,66 @@ fun MessageBox(modifier: Modifier, chatMessages: List<Message>, currentUserId: S
                 Text(
                     text = Message.message ?: "",
                     modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(RoundedCornerShape(16.dp))
                         .background(color)
                         .padding(12.dp),
                     color = Color.White,
                     fontWeight = FontWeight.Bold
                 )
             }
-
-
         }
     }
-
 }
 
 @Composable
 fun ReplyBox(reply: String, onReplyChange: (String) -> Unit, onSendReply: () -> Unit) {
     Column(
-        Modifier.fillMaxWidth()
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
+            .background(colorResource(id =  R . color . BgColor))
     ) {
-        CommonDivider()
         Row(
             Modifier
                 .fillMaxWidth()
-                .padding(4.dp), horizontalArrangement = Arrangement.SpaceBetween
+                .padding(8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
+            // TextField for input
             TextField(
                 value = reply,
                 onValueChange = onReplyChange,
                 maxLines = 3,
-                shape = RoundedCornerShape(8.dp)
+                shape = RoundedCornerShape(20.dp),
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(end = 8.dp),
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color(0xFFD1C7B9), //0xFFD1C7B9
+                    unfocusedContainerColor = Color(0xFFF6F0E7), //0xFFF6F0E7
+                    disabledContainerColor = Color(0xFFD8CFC4), //0xFFD8CFC4
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                )
             )
-            Button(onClick = onSendReply) {
-                Text(text = "Send")
+            // Circular Send Button
+            IconButton(
+                onClick = onSendReply,
+                modifier = Modifier
+                    .size(52.dp)
+                    .background(colorResource(id = R.color.BgColor), shape = CircleShape)
+                    .clip(CircleShape)
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.send),
+                    contentDescription = "Send",
+                    tint = Color.Black,
+                    modifier = Modifier
+                        .size(32.dp)
+                        .padding(2.dp)
+                )
             }
         }
-
     }
 }
 
@@ -183,8 +205,9 @@ fun ChatHeader(name: String, imageUrl: String, onBacKClicked: () -> Unit,onStart
     Row(
         Modifier
             .fillMaxWidth()
-            .padding(4.dp)
-            .wrapContentHeight(),
+            .height(88.dp)
+            .clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
+            .background(colorResource(id =  R . color . BgColor)),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {

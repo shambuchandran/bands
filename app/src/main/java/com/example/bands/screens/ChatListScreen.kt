@@ -85,7 +85,7 @@ fun ChatListScreen(navController: NavController, viewModel: BandsViewModel,callV
                             Text(text = "No chats Available")
                         }
                     } else {
-                        LazyColumn(modifier = Modifier.weight(1f)) {
+                        LazyColumn(modifier = Modifier.weight(1f).padding(top = 4.dp)) {
                             items(chats) { chat ->
                                 val chatUser =
                                     if (chat.user1.userId == userData?.userId) chat.user2 else chat.user1
@@ -149,7 +149,7 @@ fun Fab(
         onClick = { onFabClick() },
         containerColor = MaterialTheme.colorScheme.secondary,
         shape = CircleShape,
-        modifier = Modifier.padding(bottom = 40.dp)
+        modifier = Modifier.padding(bottom = 78.dp)
     ) {
         Icon(
             imageVector = Icons.Rounded.Add,

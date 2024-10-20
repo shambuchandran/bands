@@ -48,6 +48,7 @@ import com.example.bands.screens.SingleChatScreen
 import com.example.bands.screens.SingleStatusScreen
 import com.example.bands.screens.StatusScreen
 import com.example.bands.ui.theme.BandsTheme
+import com.example.bands.utils.MyAppTheme
 import com.example.bands.utils.navigateTo
 import com.permissionx.guolindev.PermissionX
 import dagger.hilt.android.AndroidEntryPoint
@@ -80,7 +81,8 @@ class MainActivity : FragmentActivity() {
 
         super.onCreate(savedInstanceState)
         setContent {
-            BandsTheme {
+           // BandsTheme {
+            MyAppTheme {
                 // A surface container using the 'background' color from the theme
                 Surface(
                     modifier = Modifier.fillMaxSize(),

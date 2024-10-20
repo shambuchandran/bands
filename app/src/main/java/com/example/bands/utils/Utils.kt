@@ -2,7 +2,9 @@ package com.example.bands.utils
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,9 +16,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -28,14 +35,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import coil.compose.rememberAsyncImagePainter
 import coil.compose.rememberImagePainter
-import com.example.bands.di.BandsViewModel
 import com.example.bands.DestinationScreen
 import com.example.bands.R
 import com.example.bands.data.MessageModel
+import com.example.bands.di.BandsViewModel
+import com.example.bands.ui.theme.Typography
 
 fun navigateTo(navController: NavController, route: String) {
     navController.navigate(route) {
@@ -48,7 +58,7 @@ fun navigateTo(navController: NavController, route: String) {
 fun CommonDivider() {
     Divider(
         color = Color.LightGray, thickness = 1.dp, modifier = Modifier
-            .alpha(.3f)
+            .alpha(.5f)
             .padding(vertical = 8.dp)
     )
 }
@@ -56,14 +66,14 @@ fun CommonDivider() {
 @Composable
 fun CommonImage(
     data: String?,
-    modifier: Modifier = Modifier.wrapContentSize(),
-    contentScale: ContentScale = ContentScale.Crop
+    modifier: Modifier = Modifier.fillMaxSize(),
+    contentScale: ContentScale = ContentScale.Crop,
 ) {
-    val painter = rememberImagePainter(data = data)
+    val painter = rememberAsyncImagePainter(model = data)
     Image(
         painter = painter,
         contentDescription = "Image",
-        modifier = modifier,
+        modifier = modifier.clip(CircleShape),
         contentScale = contentScale
     )
 
@@ -71,30 +81,63 @@ fun CommonImage(
 
 @Composable
 fun CommonTitleText(text: String) {
-    Text(
-        text = text,
-        fontWeight = FontWeight.Bold,
-        fontSize = 36.sp,
-        modifier = Modifier.padding(8.dp)
-    )
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(82.dp),
+        color = colorResource(id = R.color.BgColor),
+        shape = RoundedCornerShape(bottomStart = 20.dp, bottomEnd =  20.dp),
+        shadowElevation = 8.dp,
+        tonalElevation = 8.dp,
+    ) {
+        Text(
+            text = text,
+            fontWeight = FontWeight.Bold,
+            fontSize = 36.sp,
+            modifier = Modifier.padding(12.dp)
+        )
+    }
 }
 
 @Composable
-fun CommonRow(imageUrl: String?, name: String?, onItemClick: () -> Unit) {
-    Row(
+fun CommonRow(
+    imageUrl: String?,
+    name: String?,
+    onItemClick: () -> Unit
+) {
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .height(72.dp)
+            .padding(horizontal = 8.dp, vertical = 3.dp)
             .clickable { onItemClick.invoke() },
-        verticalAlignment = Alignment.CenterVertically
+        shape = RoundedCornerShape(8.dp),
+        tonalElevation = 4.dp,
+        shadowElevation = 4.dp,
+        color = Color(0xFF3C5A7A)
     ) {
-        CommonImage(data = imageUrl, modifier = Modifier
-            .padding(8.dp)
-            .size(54.dp)
-            .clip(CircleShape)
-            .background(Color.Gray))
-        Text(text = name?:"---", fontWeight = FontWeight.Bold,modifier = Modifier
-            .padding(start = 4.dp))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(72.dp)
+                .padding(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Profile image
+            CommonImage(
+                data = imageUrl,
+                modifier = Modifier
+                    .size(54.dp)
+                    .clip(CircleShape)
+                    .background(Color.Gray)
+            )
+            Text(
+                text = name ?: "---",
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp,
+                color = Color.Black,
+                modifier = Modifier.padding(start = 16.dp)
+            )
+        }
     }
 }
 @Composable
@@ -149,4 +192,43 @@ fun CheckIsSignedIn(viewModel: BandsViewModel, navController: NavController) {
 
 interface NewMessageInterface {
     fun onNewMessage(message: MessageModel)
+}
+
+val Black = Color(0xFF000000)
+val White = Color(0xFFFFFFFF)
+val BgColor = Color(0xFFEDE1D1)
+val AuthTextColor = Color(0xFF515532)
+val ChatBgColor = Color(0xFF304F6D)
+
+
+@Composable
+fun MyAppTheme(
+    darkTheme: Boolean = isSystemInDarkTheme(),
+    content: @Composable () -> Unit
+) {
+    val colorScheme = if (darkTheme) {
+        // Dark theme colors
+        darkColorScheme(
+            primary = Black,
+            onPrimary = White,
+            background = ChatBgColor,
+            surface = ChatBgColor,
+            onSurface = AuthTextColor
+        )
+    } else {
+        // Light theme colors
+        lightColorScheme(
+            primary = Black,
+            onPrimary = White,
+            background = ChatBgColor,
+            surface = ChatBgColor,
+            onSurface = AuthTextColor
+        )
+    }
+
+    MaterialTheme(
+        colorScheme = colorScheme,
+        typography = Typography,
+        content = content
+    )
 }

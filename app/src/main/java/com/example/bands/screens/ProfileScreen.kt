@@ -2,21 +2,27 @@ package com.example.bands.screens
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
@@ -27,14 +33,21 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import coil.compose.rememberAsyncImagePainter
+import coil.compose.rememberImagePainter
+import com.example.bands.DestinationScreen
+import com.example.bands.R
 import com.example.bands.di.BandsViewModel
 import com.example.bands.utils.CommonDivider
 import com.example.bands.utils.CommonImage
 import com.example.bands.utils.CommonProgressBar
-import com.example.bands.DestinationScreen
 import com.example.bands.utils.navigateTo
 
 @Composable
@@ -56,7 +69,7 @@ fun ProfileScreen(navController: NavController, viewModel: BandsViewModel) {
                 modifier = Modifier
                     .weight(1f)
                     .verticalScroll(rememberScrollState())
-                    .padding(8.dp),
+                    .padding(bottom = 8.dp),
                 viewModel = viewModel,
                 name = name,
                 phoneNumber = phoneNumber,
@@ -78,7 +91,6 @@ fun ProfileScreen(navController: NavController, viewModel: BandsViewModel) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileContent(
     onBack: () -> Unit,
@@ -89,35 +101,42 @@ fun ProfileContent(
     phoneNumber: String,
     onNameChange: (String) -> Unit,
     onPhoneNumberChange: (String) -> Unit,
-    modifier: Modifier
+    modifier: Modifier = Modifier
 ) {
     val imageUrl = viewModel.userData.value?.imageUrl
 
-    Column (modifier = modifier) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(text = "Back", modifier = Modifier.clickable { onBack.invoke() })
-            Text(text = "Save", modifier = Modifier.clickable { onSave.invoke() })
-        }
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp),
+        color = colorResource(id = R.color.BgColor),
+        shape = RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp),
+        shadowElevation = 8.dp,
+        tonalElevation = 8.dp
+    ) {
+        Column(modifier = Modifier.padding(2.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(text = "Back", modifier = Modifier.clickable { onBack.invoke() })
+                Text(text = "Save", modifier = Modifier.clickable { onSave.invoke() })
+            }
             CommonDivider()
             ProfileImage(viewModel = viewModel, imageUrl = imageUrl)
             CommonDivider()
             Row(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(4.dp), horizontalArrangement = Arrangement.Center
+                Modifier.fillMaxWidth().padding(4.dp), horizontalArrangement = Arrangement.Center
             ) {
                 TextField(
                     value = name,
                     onValueChange = onNameChange,
                     label = { Text(text = "Name") },
-                    colors = TextFieldDefaults.textFieldColors(
+                    colors = TextFieldDefaults.colors(
                         focusedTextColor = Color.Black,
-                        containerColor =  Color.Transparent
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        disabledContainerColor = Color.Transparent,
                     )
                 )
             }
@@ -130,22 +149,23 @@ fun ProfileContent(
                     value = phoneNumber,
                     onValueChange = onPhoneNumberChange,
                     label = { Text(text = "Phone Number") },
-                    colors = TextFieldDefaults.textFieldColors(
+                    colors = TextFieldDefaults.colors(
                         focusedTextColor = Color.Black,
-                        containerColor =  Color.Transparent
-
-                    )
+                        disabledTextColor = Color.Black,
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        disabledContainerColor = Color.Transparent,
+                        disabledIndicatorColor = Color.Black,
+                    ), enabled = false
                 )
             }
             CommonDivider()
             Row(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(4.dp), horizontalArrangement = Arrangement.Center
+                Modifier.fillMaxWidth().padding(top = 24.dp), horizontalArrangement = Arrangement.Center
             ) {
                 Text(text = "Logout", Modifier.clickable { onLogout.invoke() })
             }
-
+        }
     }
 }
 
@@ -168,14 +188,35 @@ fun ProfileImage(imageUrl: String?, viewModel: BandsViewModel) {
         ) {
             Card(
                 shape = CircleShape, modifier = Modifier
-                    .padding(8.dp)
-                    .size(100.dp)
+                    .padding(2.dp)
+                    .size(108.dp)
+                    .align(Alignment.CenterHorizontally)
+                    .border(
+                    width = 2.dp,
+                    color = Color.Black,
+                    shape = CircleShape
+                )
             ) {
-                CommonImage(data = imageUrl)
+                ImageAtProfile(data = imageUrl)
             }
             Text(text = "Change Profile Pic")
         }
         if (viewModel.inProgress.value) CommonProgressBar()
     }
+
+}
+@Composable
+fun ImageAtProfile(
+    data: String?,
+    modifier: Modifier = Modifier.fillMaxSize().background(colorResource(id = R.color.BgColor)),
+    contentScale: ContentScale = ContentScale.Crop,
+) {
+    val painter = rememberAsyncImagePainter(model = data)
+    Image(
+        painter = painter,
+        contentDescription = "Image",
+        modifier = modifier.padding(12.dp),
+        contentScale = contentScale
+    )
 
 }

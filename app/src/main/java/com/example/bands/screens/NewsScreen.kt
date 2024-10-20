@@ -1,7 +1,9 @@
 package com.example.bands.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
@@ -35,12 +37,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.bands.DestinationScreen
+import com.example.bands.R
 import com.example.bands.di.NewsViewModel
 import com.kwabenaberko.newsapilib.models.Article
 import java.util.Locale
@@ -115,15 +119,15 @@ fun CategoryBar(newsViewModel: NewsViewModel) {
 fun ArticleItem(article: Article, navController: NavController) {
 
     Card(
-        modifier = Modifier.padding(8.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        onClick = {
-            navController.navigate(DestinationScreen.NewsArticleScreenRoute(article.url))
-        }
+        modifier = Modifier
+            .padding(8.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+        onClick = { navController.navigate(DestinationScreen.NewsArticleScreenRoute(article.url)) }
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .background(colorResource(id = R.color.BgColor))
                 .padding(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -140,7 +144,13 @@ fun ArticleItem(article: Article, navController: NavController) {
                     .padding(start = 8.dp)
             ) {
                 Text(text = article.title, fontWeight = FontWeight.Bold, maxLines = 3)
-                Text(text = article.source.name, fontSize = 14.sp, maxLines = 1)
+                Row(modifier = Modifier.fillMaxSize(),
+                    verticalAlignment = Alignment.Bottom,
+                    horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(text = article.source.name, fontSize = 14.sp, maxLines = 1)
+                    Text(text = article.publishedAt, fontSize = 14.sp, maxLines = 1)
+                }
+
 
             }
 

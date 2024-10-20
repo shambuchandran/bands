@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.AddCircle
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material3.Divider
 import androidx.compose.material3.FloatingActionButton
@@ -33,18 +34,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.bands.DestinationScreen
+import com.example.bands.R
 import com.example.bands.di.BandsViewModel
 import com.example.bands.di.NewsViewModel
 import com.example.bands.utils.CommonProgressBar
 import com.example.bands.utils.CommonStatus
 import com.example.bands.utils.CommonTitleText
 import com.example.bands.utils.navigateTo
+import java.util.concurrent.RecursiveTask
 
 @Composable
 fun StatusScreen(navController: NavController, viewModel: BandsViewModel) {
@@ -161,10 +165,16 @@ fun StatusScreen(navController: NavController, viewModel: BandsViewModel) {
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "NEWS TODAY",
-                            modifier = Modifier.align(Alignment.Start),
+                            text = "News Today",
+                            modifier = Modifier
+                                .align(Alignment.Start)
+                                .padding(4.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    colorResource(id = R.color.BgColor)
+                                ).padding(horizontal = 12.dp, vertical = 4.dp),
                             color = Color.Black,
-                            fontSize = 24.sp,
+                            fontSize = 20.sp,
                             fontFamily = FontFamily.SansSerif,
                             fontWeight = FontWeight.Bold
                         )
@@ -216,10 +226,10 @@ fun FabStatus(onFabClick: () -> Unit) {
         onClick = onFabClick,
         containerColor = MaterialTheme.colorScheme.secondary,
         shape = CircleShape,
-        modifier = Modifier.padding(bottom = 40.dp)
+        modifier = Modifier.padding(bottom = 78.dp)
     ) {
         Icon(
-            imageVector = Icons.Rounded.Edit,
+            imageVector = Icons.Rounded.AddCircle,
             contentDescription = "Add Status",
             tint = Color.White
         )

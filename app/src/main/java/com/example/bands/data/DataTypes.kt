@@ -35,12 +35,15 @@ data class MessageModel(
     val type:String,
     val name:String?=null,
     val target:String?=null,
-    val data:Any?=null
+    val data:Any?=null,
+    val callMode: Boolean,
 )
 data class IceCandidateModel(
     val sdpMid:String,
     val sdpMLineIndex:Double,
     val sdpCandidate:String
 )
+
+
 
 

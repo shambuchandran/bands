@@ -47,7 +47,6 @@ import com.example.bands.screens.SignUpScreen
 import com.example.bands.screens.SingleChatScreen
 import com.example.bands.screens.SingleStatusScreen
 import com.example.bands.screens.StatusScreen
-import com.example.bands.ui.theme.BandsTheme
 import com.example.bands.utils.MyAppTheme
 import com.example.bands.utils.navigateTo
 import com.permissionx.guolindev.PermissionX
@@ -155,7 +154,6 @@ class MainActivity : FragmentActivity() {
             if (incomingCallState.value != null) {
                 IncomingCallComponent(
                     incomingCallerName = incomingCallState.value?.name,
-                    //onAcceptPressed = callViewModel::acceptCall,
                     onAcceptPressed = { incomingCallerName ->
                         callViewModel.acceptCall()
                         val findChat = viewModel.chats.value.find {
@@ -233,6 +231,7 @@ class MainActivity : FragmentActivity() {
                         .weight(2f)
                         .padding(end = 8.dp)
                         .clickable {
+
                             onAcceptPressed.invoke(incomingCallerName)
                         }
                 )

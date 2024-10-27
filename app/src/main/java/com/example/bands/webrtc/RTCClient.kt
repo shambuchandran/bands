@@ -1,9 +1,9 @@
 package com.example.bands.webrtc
 
 import android.app.Application
-import android.util.Log
 import com.example.bands.data.MessageModel
-import com.example.bands.socket.SocketRepository
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import org.webrtc.AudioTrack
 import org.webrtc.Camera2Enumerator
 import org.webrtc.CameraVideoCapturer
@@ -23,52 +23,56 @@ import org.webrtc.VideoTrack
 
 class RTCClient(
     private val application: Application,
-    private val username:String,
+    private val userName:String,
     private val socketRepository: SocketRepository,
     private val observer :PeerConnection.Observer
 ) {
 
+
     init {
         initPeerConnectionFactory(application)
     }
-    private val eglContext=EglBase.create()
+
+    private val eglContext = EglBase.create()
     private val peerConnectionFactory by lazy { createPeerConnectionFactory() }
-//    private val iceServer = listOf(
+
+    //    private val iceServer = listOf(
 //        PeerConnection.IceServer.builder("stun:iphone-stun.strato-iphone.de:3478").createIceServer(),
 //        PeerConnection.IceServer("stun:openrelay.metered.ca:80"),
 //        PeerConnection.IceServer("turn:openrelay.metered.ca:80","openrelayproject","openrelayproject"),
 //        PeerConnection.IceServer("turn:openrelay.metered.ca:443","openrelayproject","openrelayproject"),
 //        PeerConnection.IceServer("turn:openrelay.metered.ca:443?transport=tcp","openrelayproject","openrelayproject"),)
     private val iceServer= listOf(
-    PeerConnection.IceServer.builder("stun:stun.relay.metered.ca:80").createIceServer(),
-    PeerConnection.IceServer.builder("turn:global.relay.metered.ca:80")
-        .setUsername("9413fdb2cc64ea912deaa464")
-        .setPassword("6aOOsT45M6b4AkH+")
-        .createIceServer(),
-    PeerConnection.IceServer.builder("turn:global.relay.metered.ca:80?transport=tcp")
-        .setUsername("9413fdb2cc64ea912deaa464")
-        .setPassword("6aOOsT45M6b4AkH+")
-        .createIceServer(),
-    PeerConnection.IceServer.builder("turn:global.relay.metered.ca:443")
-        .setUsername("9413fdb2cc64ea912deaa464")
-        .setPassword("6aOOsT45M6b4AkH+")
-        .createIceServer(),
-    PeerConnection.IceServer.builder("turns:global.relay.metered.ca:443?transport=tcp")
-        .setUsername("9413fdb2cc64ea912deaa464")
-        .setPassword("6aOOsT45M6b4AkH+")
-        .createIceServer()
+        PeerConnection.IceServer.builder("stun:stun.relay.metered.ca:80").createIceServer(),
+        PeerConnection.IceServer.builder("turn:global.relay.metered.ca:80")
+            .setUsername("9413fdb2cc64ea912deaa464")
+            .setPassword("6aOOsT45M6b4AkH+")
+            .createIceServer(),
+        PeerConnection.IceServer.builder("turn:global.relay.metered.ca:80?transport=tcp")
+            .setUsername("9413fdb2cc64ea912deaa464")
+            .setPassword("6aOOsT45M6b4AkH+")
+            .createIceServer(),
+        PeerConnection.IceServer.builder("turn:global.relay.metered.ca:443")
+            .setUsername("9413fdb2cc64ea912deaa464")
+            .setPassword("6aOOsT45M6b4AkH+")
+            .createIceServer(),
+        PeerConnection.IceServer.builder("turns:global.relay.metered.ca:443?transport=tcp")
+            .setUsername("9413fdb2cc64ea912deaa464")
+            .setPassword("6aOOsT45M6b4AkH+")
+            .createIceServer()
     )
 
-    private val peerConnection by lazy { createPeerConnectionFactory(observer) }
+    private val peerConnection by lazy { createPeerConnection(observer) }
     private val localVideoSource by lazy { peerConnectionFactory.createVideoSource(false) }
     private val localAudioSource by lazy { peerConnectionFactory.createAudioSource(MediaConstraints()) }
     private var videoCapturer: CameraVideoCapturer? = null
     private var localAudioTrack: AudioTrack? = null
     private var localVideoTrack: VideoTrack? = null
-    private fun initPeerConnectionFactory(application: Application) {
-        val peerConnectionOption =PeerConnectionFactory.InitializationOptions.builder(application)
+
+    private fun initPeerConnectionFactory(application: Application){
+        val peerConnectionOption=PeerConnectionFactory.InitializationOptions.builder(application)
             .setEnableInternalTracer(true)
-            .setFieldTrials("WebRTC-H264HighProfile/Enabled/")
+            .setFieldTrials("webRTC-H264HighProfile/Enabled/")
             .createInitializationOptions()
         PeerConnectionFactory.initialize(peerConnectionOption)
     }
@@ -81,40 +85,36 @@ class RTCClient(
                 disableNetworkMonitor=true
             }).createPeerConnectionFactory()
     }
-    private fun createPeerConnectionFactory(observer: Observer):PeerConnection?{
+    private fun createPeerConnection(observer: Observer):PeerConnection?{
         return peerConnectionFactory.createPeerConnection(iceServer,observer)
     }
-
-    fun initSurfaceView(surface: SurfaceViewRenderer, isLocalView: Boolean) {
-        surface.run {
+    fun initSurfaceView(surfaceViewRenderer: SurfaceViewRenderer){
+        surfaceViewRenderer.run {
             setEnableHardwareScaler(true)
-            setMirror(isLocalView)
-            init(eglContext.eglBaseContext, null)
+            setMirror(true)
+            init(eglContext.eglBaseContext,null)
         }
     }
-    fun startLocalVideo(surfaceView: SurfaceViewRenderer){
+    fun startLocalVideo(surfaceViewRenderer: SurfaceViewRenderer){
         val surfaceTextureHelper=SurfaceTextureHelper.create(Thread.currentThread().name,eglContext.eglBaseContext)
-        videoCapturer = getVideoCapturer(application)
-//        videoCapturer?.initialize(surfaceTextureHelper,surfaceView.context,localVideoSource.capturerObserver)
-//        videoCapturer?.startCapture(320,240,30)
-        videoCapturer?.initialize(surfaceTextureHelper, surfaceView.context, localVideoSource.capturerObserver)
-        try {
-            videoCapturer?.startCapture(320, 240, 30)
-            Log.d("RTCClient", "Started local video capture")
-        } catch (e: Exception) {
-            Log.e("RTCClient", "Failed to start local video capture: ${e.message}")
-        }
-        localVideoTrack =peerConnectionFactory.createVideoTrack("local_track",localVideoSource)
-        localVideoTrack?.addSink(surfaceView)
-        localAudioTrack =peerConnectionFactory.createAudioTrack("local_track_audio",localAudioSource)
+        videoCapturer =getVideoCapturer(application)
+        videoCapturer?.initialize(surfaceTextureHelper,surfaceViewRenderer.context,localVideoSource.capturerObserver)
+        videoCapturer?.startCapture(320,240,30)
+        localVideoTrack = peerConnectionFactory.createVideoTrack("local_video_track",localVideoSource)
+        localVideoTrack?.addSink(surfaceViewRenderer)
+        localAudioTrack = peerConnectionFactory.createAudioTrack("local_audio_track",localAudioSource)
         val localStream=peerConnectionFactory.createLocalMediaStream("local_stream")
-        localStream.addTrack(localAudioTrack)
         localStream.addTrack(localVideoTrack)
+        localStream.addTrack(localAudioTrack)
         peerConnection?.addStream(localStream)
-
     }
-
-    private fun getVideoCapturer(application: Application): CameraVideoCapturer {
+    fun startLocalAudio(){
+        localAudioTrack = peerConnectionFactory.createAudioTrack("local_audio_track", localAudioSource)
+        val localStream = peerConnectionFactory.createLocalMediaStream("local_audio_stream")
+        localStream.addTrack(localAudioTrack)
+        peerConnection?.addStream(localStream)
+    }
+    private fun getVideoCapturer(application: Application):CameraVideoCapturer{
         return Camera2Enumerator(application).run {
             deviceNames.find {
                 isFrontFacing(it)
@@ -123,35 +123,41 @@ class RTCClient(
             }?: throw IllegalStateException()
         }
     }
-    fun call(target:String){
-        val mediaConstraints=MediaConstraints()
-        mediaConstraints.mandatory.add(MediaConstraints.KeyValuePair("offerToReceiveVideo","true"))
+    fun call(target:String,isAudioCall:Boolean){
+        val mediaConstraints =MediaConstraints()
+        if (isAudioCall) {
+            mediaConstraints.mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveAudio", "true"))
+            mediaConstraints.mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveVideo", "false"))
+            startLocalAudio()
+        } else {
+            mediaConstraints.mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveAudio", "true"))
+            mediaConstraints.mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveVideo", "true"))
+        }
         peerConnection?.createOffer(object :SdpObserver{
             override fun onCreateSuccess(desc: SessionDescription?) {
-                Log.d("CallViewModel", "Offer created successfully: ${desc?.description}")
                 peerConnection?.setLocalDescription(object :SdpObserver{
                     override fun onCreateSuccess(p0: SessionDescription?) {
 
                     }
 
                     override fun onSetSuccess() {
-                        val offer= hashMapOf(
+                        val offer = hashMapOf(
                             "sdp" to desc?.description,
                             "type" to desc?.type
                         )
                         socketRepository.sendMessageToSocket(
                             MessageModel(
-                                "create_offer",username,target,offer
+                                "create_offer", userName, target, offer,isAudioCall
                             )
                         )
                     }
 
                     override fun onCreateFailure(p0: String?) {
-                        Log.e("CallViewModel", "Failed to set local description: $p0")
+
                     }
 
                     override fun onSetFailure(p0: String?) {
-                        Log.e("CallViewModel", "Failed to set local description: $p0")
+
                     }
 
                 },desc)
@@ -163,6 +169,7 @@ class RTCClient(
             }
 
             override fun onCreateFailure(p0: String?) {
+
             }
 
             override fun onSetFailure(p0: String?) {
@@ -171,53 +178,66 @@ class RTCClient(
 
         },mediaConstraints)
     }
-    fun onRemoteSessionReceived(session:SessionDescription){
-        peerConnection?.setRemoteDescription(object :SdpObserver{
+    fun onRemoteSessionReceived(session: SessionDescription) {
+        peerConnection?.setRemoteDescription(object : SdpObserver {
             override fun onCreateSuccess(p0: SessionDescription?) {
-            }
-            override fun onSetSuccess() {
-                Log.d("RTCClient", "Remote session description set successfully")
-            }
-            override fun onCreateFailure(p0: String?) {
-            }
-            override fun onSetFailure(p0: String?) {
-                Log.e("RTCClient", "Failed to set remote session description: $p0")
+
             }
 
-        },session)
+            override fun onSetSuccess() {
+
+            }
+
+            override fun onCreateFailure(p0: String?) {
+
+            }
+
+            override fun onSetFailure(p0: String?) {
+
+            }
+
+        }, session)
+
     }
-
-    fun answer(target: String){
-        val constraints=MediaConstraints()
-        constraints.mandatory.add(MediaConstraints.KeyValuePair("offerToReceiveVideo","true"))
-        peerConnection?.createAnswer(object :SdpObserver{
+    fun answer(target: String,isAudioCall:Boolean) {
+        val mediaConstraints = MediaConstraints()
+        if (isAudioCall) {
+            mediaConstraints.mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveAudio", "true"))
+            mediaConstraints.mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveVideo", "false"))
+            startLocalAudio()
+        } else {
+            mediaConstraints.mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveAudio", "true"))
+            mediaConstraints.mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveVideo", "true"))
+        }
+        peerConnection?.createAnswer(object : SdpObserver {
             override fun onCreateSuccess(desc: SessionDescription?) {
-              peerConnection?.setLocalDescription(object :SdpObserver{
-                  override fun onCreateSuccess(p0: SessionDescription?) {
+                peerConnection?.setLocalDescription(object : SdpObserver {
+                    override fun onCreateSuccess(p0: SessionDescription?) {
 
-                  }
+                    }
 
-                  override fun onSetSuccess() {
-                      val answer= hashMapOf(
-                          "sdp" to desc?.description,
-                          "type" to desc?.type
-                      )
-                      socketRepository.sendMessageToSocket(
-                          MessageModel(
-                          "create_answer",username,target,answer
-                      )
-                      )
+                    override fun onSetSuccess() {
+                        val answer = hashMapOf(
+                            "sdp" to desc?.description,
+                            "type" to desc?.type
 
-                  }
+                        )
+                        socketRepository.sendMessageToSocket(
+                            MessageModel(
+                                "create_answer", userName, target, answer,isAudioCall
+                            )
+                        )
+                    }
 
-                  override fun onCreateFailure(p0: String?) {
-                  }
+                    override fun onCreateFailure(p0: String?) {
 
-                  override fun onSetFailure(p0: String?) {
+                    }
 
-                  }
+                    override fun onSetFailure(p0: String?) {
 
-              },desc)
+                    }
+
+                }, desc)
             }
 
             override fun onSetSuccess() {
@@ -232,78 +252,32 @@ class RTCClient(
 
             }
 
-        },constraints)
+        }, mediaConstraints)
+
     }
 
     fun addIceCandidate(p0: IceCandidate?) {
-        Log.d("RTCClient", "Adding ICE candidate: ${p0?.sdp}")
         peerConnection?.addIceCandidate(p0)
+
     }
+
     fun switchCamera() {
         videoCapturer?.switchCamera(null)
     }
 
     fun toggleAudio(mute: Boolean) {
         localAudioTrack?.setEnabled(mute)
+
     }
 
     fun toggleCamera(cameraPause: Boolean) {
         localVideoTrack?.setEnabled(cameraPause)
     }
 
+
     fun endCall() {
         peerConnection?.close()
-        videoCapturer?.stopCapture()
-        videoCapturer = null
     }
 
-
-    //audioCall
-    fun startAudioCall(target: String) {
-        if (peerConnection == null) {
-            createPeerConnectionFactory(observer)
-        }
-        localAudioTrack = peerConnectionFactory.createAudioTrack("local_audio_track", localAudioSource)
-        val localStream = peerConnectionFactory.createLocalMediaStream("local_audio_stream")
-        localStream.addTrack(localAudioTrack)
-        peerConnection?.addStream(localStream)
-        val mediaConstraints = MediaConstraints().apply {
-            mandatory.add(MediaConstraints.KeyValuePair("offerToReceiveAudio", "true"))
-            mandatory.add(MediaConstraints.KeyValuePair("offerToReceiveVideo", "false")) // Disable video
-        }
-        peerConnection?.createOffer(object : SdpObserver {
-            override fun onCreateSuccess(desc: SessionDescription?) {
-                peerConnection?.setLocalDescription(object : SdpObserver {
-                    override fun onSetSuccess() {
-                        val offer = hashMapOf(
-                            "sdp" to desc?.description,
-                            "type" to desc?.type
-                        )
-                        socketRepository.sendMessageToSocket(
-                            MessageModel("create_audio_offer", username, target, offer)
-                        )
-                    }
-                    override fun onSetFailure(error: String?) {
-                        Log.e("RTCClient", "Failed to set local description for audio call: $error")
-                    }
-                    override fun onCreateSuccess(p0: SessionDescription?) {}
-                    override fun onCreateFailure(p0: String?) {}
-                }, desc)
-            }
-
-            override fun onSetSuccess() {}
-            override fun onCreateFailure(error: String?) {
-                Log.e("RTCClient", "Failed to create audio offer: $error")
-            }
-            override fun onSetFailure(p0: String?) {}
-        }, mediaConstraints)
-    }
-
-//    fun disableVideo() {
-//        localVideoTrack?.setEnabled(false)
-//        localVideoTrack = null
-//        videoCapturer?.stopCapture()
-//        videoCapturer = null
-//    }
 
 }

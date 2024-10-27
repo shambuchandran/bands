@@ -5,7 +5,9 @@ import android.app.Activity
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.core.text.isDigitsOnly
 import androidx.lifecycle.ViewModel
 import com.android.volley.Response
@@ -66,6 +68,7 @@ class BandsViewModel @Inject constructor(
     val chatMessages = mutableStateOf<List<Message>>(listOf())
     var inProgressChatMessages = mutableStateOf(false)
     var currentChatListener: ListenerRegistration? = null
+    var showStickyHeader by mutableStateOf(false)
 
     //val status = mutableStateOf<List<Status>>(listOf())
     private val _status = MutableStateFlow<List<Status>>(emptyList())
@@ -90,6 +93,9 @@ class BandsViewModel @Inject constructor(
                 getUserData(it)
             }
         }
+    }
+    fun toggleStickyHeader() {
+        showStickyHeader = !showStickyHeader
     }
 
 

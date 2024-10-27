@@ -35,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -86,7 +87,7 @@ fun StatusScreen(navController: NavController, viewModel: BandsViewModel) {
                         .fillMaxSize()
                         .padding(it)
                 ) {
-                    CommonTitleText(text = "Happening")
+                    CommonTitleText(text = stringResource(R.string.happening))
 
                     if (statuses.isEmpty()) {
                         Column(
@@ -172,7 +173,8 @@ fun StatusScreen(navController: NavController, viewModel: BandsViewModel) {
                                 .clip(CircleShape)
                                 .background(
                                     colorResource(id = R.color.BgColor)
-                                ).padding(horizontal = 12.dp, vertical = 4.dp),
+                                )
+                                .padding(horizontal = 12.dp, vertical = 4.dp),
                             color = Color.Black,
                             fontSize = 20.sp,
                             fontFamily = FontFamily.SansSerif,

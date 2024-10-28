@@ -23,6 +23,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -32,11 +33,16 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
+import com.airbnb.lottie.compose.LottieAnimation
+import com.airbnb.lottie.compose.LottieCompositionSpec
+import com.airbnb.lottie.compose.LottieConstants
+import com.airbnb.lottie.compose.rememberLottieComposition
 import com.example.bands.DestinationScreen
 import com.example.bands.R
 import com.example.bands.data.MessageModel
@@ -99,7 +105,7 @@ fun CommonTitleText(text: String) {
 fun CommonRow(
     imageUrl: String?,
     name: String?,
-    onItemClick: () -> Unit
+    onItemClick: () -> Unit,
 ) {
     Surface(
         modifier = Modifier
@@ -119,13 +125,18 @@ fun CommonRow(
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Profile image
-            CommonImage(
-                data = imageUrl,
-                modifier = Modifier
-                    .size(54.dp)
-                    .clip(CircleShape)
-                    .background(Color.Gray)
-            )
+            if (imageUrl==""){
+                val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.anim_icon))
+                LottieAnimation(composition, iterations = LottieConstants.IterateForever,modifier = Modifier.size(58.dp) )
+            }else{
+                CommonImage(
+                    data = imageUrl,
+                    modifier = Modifier
+                        .size(54.dp)
+                        .clip(CircleShape)
+                        .background(Color.Gray)
+                )
+            }
             Text(
                 text = name ?: "---",
                 fontWeight = FontWeight.Bold,
@@ -146,7 +157,9 @@ fun CommonStatus(imageUrl: String?, name: String?, onItemClick: () -> Unit) {
             .clickable { onItemClick.invoke() },
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        CommonImage(data = imageUrl, modifier = Modifier
+        CommonImage(
+            data = imageUrl,
+            modifier = Modifier
             .padding(8.dp)
             .size(54.dp)
             .clip(CircleShape)

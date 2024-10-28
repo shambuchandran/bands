@@ -114,5 +114,8 @@ dependencies {
     implementation ("com.github.KwabenBerko:News-API-Java:1.0.2")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
 
+    implementation("com.google.ai.client.generativeai:generativeai:0.7.0")
+    implementation ("com.airbnb.android:lottie-compose:5.0.3")
+
 
 }

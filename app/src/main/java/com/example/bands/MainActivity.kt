@@ -25,6 +25,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -38,7 +39,9 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.example.bands.di.BandsViewModel
 import com.example.bands.di.CallViewModel
+import com.example.bands.di.GemBotViewModel
 import com.example.bands.screens.ChatListScreen
+import com.example.bands.screens.GemChatPage
 import com.example.bands.screens.LoginScreen
 import com.example.bands.screens.NewsArticleScreen
 import com.example.bands.screens.PhoneAuthScreen
@@ -67,6 +70,7 @@ sealed class DestinationScreen(var route: String) {
     object SingleStatus : DestinationScreen("singleStatus/{userId}") {
         fun createRoute(userId: String) = "singleStatus/$userId"
     }
+    object GemChatPage : DestinationScreen("gemChatPage")
 
     @Serializable
     data class NewsArticleScreenRoute(val url: String)
@@ -101,6 +105,7 @@ class MainActivity : FragmentActivity() {
         val navController = rememberNavController()
         val viewModel = hiltViewModel<BandsViewModel>()
         val callViewModel = hiltViewModel<CallViewModel>()
+        val gemBotViewModel= hiltViewModel<GemBotViewModel>()
         val incomingCallState = callViewModel.incomingCallerSession.collectAsState(null)
 
         Box {
@@ -131,6 +136,9 @@ class MainActivity : FragmentActivity() {
                         )
                     }
 
+                }
+                composable(DestinationScreen.GemChatPage.route) {
+                    GemChatPage(viewModel = gemBotViewModel, navController = navController, context = applicationContext )
                 }
                 composable(DestinationScreen.Profile.route) {
                     ProfileScreen(navController, viewModel)

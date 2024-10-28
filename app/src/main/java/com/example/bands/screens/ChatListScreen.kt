@@ -1,11 +1,5 @@
 package com.example.bands.screens
 
-import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.util.Base64
-import android.util.Log
-import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -13,19 +7,16 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -51,9 +42,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.bands.DestinationScreen
-import com.example.bands.R
-import com.example.bands.data.ChatData
-import com.example.bands.data.ChatUser
 import com.example.bands.di.BandsViewModel
 import com.example.bands.di.CallViewModel
 import com.example.bands.utils.CommonProgressBar
@@ -61,21 +49,20 @@ import com.example.bands.utils.CommonRow
 import com.example.bands.utils.CommonTitleText
 import com.example.bands.utils.navigateTo
 import org.webrtc.SurfaceViewRenderer
-import java.io.ByteArrayOutputStream
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ChatListScreen(
     navController: NavController,
     viewModel: BandsViewModel,
-    callViewModel: CallViewModel
+    callViewModel: CallViewModel,
 ) {
 
     val inProgress = viewModel.inProgressChats
     if (inProgress.value) {
         CommonProgressBar()
     } else {
-        val chats = viewModel.chats.value.toMutableList()
+        val chats = viewModel.chats.value
         val userData = viewModel.userData.value
         val showDialog = remember {
             mutableStateOf(false)
@@ -97,23 +84,9 @@ fun ChatListScreen(
             showDialog.value = false
             showChildFab.value = false
         }
-        val image = drawableToBase64(LocalContext.current, R.drawable.cyborg_11260851)
 
         val onAddAiChat: () -> Unit = {
 
-//            val gemBotChat = ChatData(
-//                chatId = "gem_bot",
-//                user1 = ChatUser(
-//                    userId = userData?.userId ?: "unknown",
-//                    name = userData?.name ?: "You"
-//                ),
-//                user2 = ChatUser(
-//                    userId = "Gem-Bot",
-//                    name = "GemBot",
-//                    imageUrl = ""
-//                )
-//            )
-//            chats.add(0, gemBotChat)
             viewModel.toggleStickyHeader()
             showDialog.value = false
             showChildFab.value = false
@@ -198,12 +171,15 @@ fun ChatListScreen(
                         ) {
                             if (showStickyHeader) {
                                 stickyHeader {
-                                    CommonRow(imageUrl =image , name = "Gem Bot", onItemClick = {
-                                        Toast.makeText(context,"ai page",Toast.LENGTH_SHORT).show()
-                                    })
+                                    CommonRow(
+                                        imageUrl ="",
+                                        name = "Gem Bot",
+                                    ) {
+                                        navController.navigate(DestinationScreen.GemChatPage.route)
+                                    }
                                 }
                             }
-                            itemsIndexed(chats) { index, chat ->
+                            items(chats) { chat ->
                                 val chatUser =
                                     if (chat.user1.userId == userData?.userId) chat.user2 else chat.user1
                                 CommonRow(
@@ -275,12 +251,4 @@ fun Fab(
     }
 
 
-}
-
-fun drawableToBase64(context: Context, drawableId: Int): String {
-    val bitmap = BitmapFactory.decodeResource(context.resources, drawableId)
-    val outputStream = ByteArrayOutputStream()
-    bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
-    val byteArray = outputStream.toByteArray()
-    return Base64.encodeToString(byteArray, Base64.DEFAULT)
 }

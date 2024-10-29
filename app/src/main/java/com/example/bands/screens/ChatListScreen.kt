@@ -32,6 +32,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -42,12 +43,15 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.bands.DestinationScreen
+import com.example.bands.data.api.WeatherModel
 import com.example.bands.di.BandsViewModel
 import com.example.bands.di.CallViewModel
+import com.example.bands.di.WeatherViewModel
 import com.example.bands.utils.CommonProgressBar
 import com.example.bands.utils.CommonRow
 import com.example.bands.utils.CommonTitleText
 import com.example.bands.utils.navigateTo
+import com.example.bands.weatherupdates.NetworkResponse
 import org.webrtc.SurfaceViewRenderer
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -56,12 +60,14 @@ fun ChatListScreen(
     navController: NavController,
     viewModel: BandsViewModel,
     callViewModel: CallViewModel,
+    weatherViewModel: WeatherViewModel
 ) {
 
     val inProgress = viewModel.inProgressChats
     if (inProgress.value) {
         CommonProgressBar()
     } else {
+        val weatherResult=weatherViewModel.weatherResult.observeAsState()
         val chats = viewModel.chats.value
         val userData = viewModel.userData.value
         val showDialog = remember {
@@ -96,11 +102,30 @@ fun ChatListScreen(
         val localViewRenderer = remember { SurfaceViewRenderer(context) }
         val remoteViewRenderer = remember { SurfaceViewRenderer(context) }
 
+        val weatherData: WeatherModel? = when (val result = weatherResult.value)
+        {
+            is NetworkResponse.Error -> {
+                null
+            }
+            NetworkResponse.Loading -> {
+                null
+            }
+            is NetworkResponse.Success -> {
+                result.data
+            }
+            null -> {
+                null
+            }
+        }
+
+
+
         LaunchedEffect(key1 = Unit) {
             userData?.phoneNumber?.let {
                 callViewModel.init(it)
             }
         }
+
         DisposableEffect(Unit) {
             onDispose {
                 localViewRenderer.release()
@@ -152,7 +177,7 @@ fun ChatListScreen(
                         .fillMaxSize()
                         .padding(it)
                 ) {
-                    CommonTitleText(text = "Chats")
+                    CommonTitleText(text = "Chats",weatherData)
                     if (chats.isEmpty()) {
                         Column(
                             modifier = Modifier

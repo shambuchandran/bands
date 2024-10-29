@@ -82,6 +82,7 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+
     implementation ("com.google.dagger:hilt-android:2.48")
     ksp ("com.google.dagger:hilt-compiler:2.48")
 
@@ -96,11 +97,16 @@ dependencies {
     val nav_version = "2.8.1"
     implementation("androidx.navigation:navigation-compose:$nav_version")
     implementation("androidx.hilt:hilt-navigation-compose:1.0.0")
+
     implementation("io.coil-kt:coil-compose:2.7.0")
+    implementation("io.coil-kt.coil3:coil-compose:3.0.0-rc01")
+    implementation("io.coil-kt.coil3:coil-network-okhttp:3.0.0-rc01")
 
     implementation ("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.1")
     implementation("androidx.compose.material:material:1.6.0")
+
     implementation(libs.jetpack.compose.country.code.picker.emoji)
+
     implementation ("com.google.auth:google-auth-library-oauth2-http:1.19.0")
     implementation ("com.guolindev.permissionx:permissionx:1.8.1")
 
@@ -116,6 +122,11 @@ dependencies {
 
     implementation("com.google.ai.client.generativeai:generativeai:0.7.0")
     implementation ("com.airbnb.android:lottie-compose:5.0.3")
+
+    implementation ("com.squareup.retrofit2:retrofit:2.11.0")
+    implementation ("com.squareup.retrofit2:converter-gson:2.11.0")
+
+    implementation("androidx.compose.runtime:runtime-livedata:1.7.4")
 
 
 }

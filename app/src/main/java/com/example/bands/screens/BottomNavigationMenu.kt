@@ -39,7 +39,7 @@ fun BottomNavigationMenu(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .height(82.dp),
+            .height(74.dp),
         color = colorResource(id = R.color.BgColor),
         shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
         shadowElevation = 8.dp,

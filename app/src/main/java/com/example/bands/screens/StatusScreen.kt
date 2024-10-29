@@ -30,6 +30,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -43,20 +44,24 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.bands.DestinationScreen
 import com.example.bands.R
+import com.example.bands.data.api.WeatherModel
 import com.example.bands.di.BandsViewModel
 import com.example.bands.di.NewsViewModel
+import com.example.bands.di.WeatherViewModel
 import com.example.bands.utils.CommonProgressBar
 import com.example.bands.utils.CommonStatus
 import com.example.bands.utils.CommonTitleText
 import com.example.bands.utils.navigateTo
+import com.example.bands.weatherupdates.NetworkResponse
 import java.util.concurrent.RecursiveTask
 
 @Composable
-fun StatusScreen(navController: NavController, viewModel: BandsViewModel) {
+fun StatusScreen(navController: NavController, viewModel: BandsViewModel,weatherViewModel: WeatherViewModel) {
     val newsViewModel = NewsViewModel()
     LaunchedEffect(Unit) {
         viewModel.loadStatuses()
     }
+    val weatherResult=weatherViewModel.weatherResult.observeAsState()
 
     val inProgressSts = viewModel.inProgressStatus.collectAsState().value
     val statuses = viewModel.status.collectAsState().value
@@ -74,6 +79,21 @@ fun StatusScreen(navController: NavController, viewModel: BandsViewModel) {
                     viewModel.loadStatuses()
                 }
             }
+        val weatherData: WeatherModel? = when (val result = weatherResult.value)
+        {
+            is NetworkResponse.Error -> {
+                null
+            }
+            NetworkResponse.Loading -> {
+                null
+            }
+            is NetworkResponse.Success -> {
+                result.data
+            }
+            null -> {
+                null
+            }
+        }
 
         Scaffold(
             floatingActionButton = {
@@ -87,7 +107,7 @@ fun StatusScreen(navController: NavController, viewModel: BandsViewModel) {
                         .fillMaxSize()
                         .padding(it)
                 ) {
-                    CommonTitleText(text = stringResource(R.string.happening))
+                    CommonTitleText(text = stringResource(R.string.happening),weatherData)
 
                     if (statuses.isEmpty()) {
                         Column(

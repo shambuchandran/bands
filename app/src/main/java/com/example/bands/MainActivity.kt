@@ -40,6 +40,7 @@ import androidx.navigation.toRoute
 import com.example.bands.di.BandsViewModel
 import com.example.bands.di.CallViewModel
 import com.example.bands.di.GemBotViewModel
+import com.example.bands.di.WeatherViewModel
 import com.example.bands.screens.ChatListScreen
 import com.example.bands.screens.GemChatPage
 import com.example.bands.screens.LoginScreen
@@ -65,7 +66,6 @@ sealed class DestinationScreen(var route: String) {
     object SingleChat : DestinationScreen("singleChat/{chatId}") {
         fun createRoute(id: String) = "singleChat/$id"
     }
-
     object StatusList : DestinationScreen("statusList")
     object SingleStatus : DestinationScreen("singleStatus/{userId}") {
         fun createRoute(userId: String) = "singleStatus/$userId"
@@ -98,7 +98,6 @@ class MainActivity : FragmentActivity() {
         permissions { }
     }
 
-
     @Composable
     fun BandsAppNavigation() {
 
@@ -106,6 +105,7 @@ class MainActivity : FragmentActivity() {
         val viewModel = hiltViewModel<BandsViewModel>()
         val callViewModel = hiltViewModel<CallViewModel>()
         val gemBotViewModel= hiltViewModel<GemBotViewModel>()
+        val weatherViewModel= hiltViewModel<WeatherViewModel>()
         val incomingCallState = callViewModel.incomingCallerSession.collectAsState(null)
 
         Box {
@@ -123,7 +123,7 @@ class MainActivity : FragmentActivity() {
                     LoginScreen(navController, viewModel)
                 }
                 composable(DestinationScreen.ChatList.route) {
-                    ChatListScreen(navController, viewModel, callViewModel)
+                    ChatListScreen(navController, viewModel, callViewModel, weatherViewModel)
                 }
                 composable(DestinationScreen.SingleChat.route) {
                     val chatId = it.arguments?.getString("chatId")
@@ -144,7 +144,7 @@ class MainActivity : FragmentActivity() {
                     ProfileScreen(navController, viewModel)
                 }
                 composable(DestinationScreen.StatusList.route) {
-                    StatusScreen(navController, viewModel)
+                    StatusScreen(navController, viewModel,weatherViewModel)
                 }
                 composable(DestinationScreen.SingleStatus.route) {
                     val userId = it.arguments?.getString("userId")
@@ -202,7 +202,6 @@ class MainActivity : FragmentActivity() {
                     onGranted()
                 }
             }
-
     }
 
     @Composable

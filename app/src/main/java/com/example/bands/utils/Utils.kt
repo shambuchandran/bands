@@ -129,20 +129,19 @@ fun CommonTitleText(text: String, data: WeatherModel? = null) {
                     fontSize = 36.sp,
                 )
             }
-            if (data!= null){
-
-            }
-            IconButton(
-                onClick = { expanded.value = !expanded.value },
-                modifier = Modifier
-                    .offset(x = (-8).dp, y = (-8).dp)
-                    .size(20.dp)
-                    .align(Alignment.End)
-            ) {
-                Icon(
-                    imageVector = if (expanded.value) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                    contentDescription = "Expand/Collapse"
-                )
+            if (data!= null) {
+                IconButton(
+                    onClick = { expanded.value = !expanded.value },
+                    modifier = Modifier
+                        .offset(x = (-8).dp, y = (-8).dp)
+                        .size(20.dp)
+                        .align(Alignment.End)
+                ) {
+                    Icon(
+                        imageVector = if (expanded.value) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                        contentDescription = "Expand/Collapse"
+                    )
+                }
             }
             if (expanded.value && data != null) {
                 WeatherShowText(data)
@@ -335,7 +334,7 @@ fun WeatherShowText(
                 .focusRequester(focusRequester)
                 .focusable(enabled = true).align(Alignment.CenterVertically)
         ) {
-            Row {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 AsyncImage(
                     modifier = Modifier
                         .size(28.dp)
@@ -372,12 +371,13 @@ fun ScrollingWeather(
             .focusRequester(focusRequester)
             .focusable()
     ) {
-        GradientCapsule(text1 = data.location.name, text2 = "City")
-        GradientCapsule(text1 = data.location.localtime.split(" ")[0], text2 = "Date")
+        GradientCapsule(text1 = data.location.name, text2 = "")
+        GradientCapsule(text1 = data.current.condition.text, text2 = "Clouds")
+        GradientCapsule(text1 = data.location.localtime.split(" ")[0], text2 = "")
         GradientCapsule(text1 = data.current.humidity, text2 = "Humidity")
         GradientCapsule(text1 = data.current.wind_kph + "km/h", text2 = "Wind Speed")
         GradientCapsule(text1 = data.current.uv, text2 = "UV")
-        GradientCapsule(text1 = data.current.cloud, text2 = "Cloud")
+        GradientCapsule(text1 = "${data.current.feelslike_c}°C", text2 = "Feels like")
     }
 }
 
@@ -404,7 +404,7 @@ fun GradientCapsule(
         ) {
             Row {
                 Text(
-                    text = "$text1-",
+                    text = "$text1 ",
                     color = Color(0xFF4E3B31),
                     fontWeight = FontWeight.Medium
                 )

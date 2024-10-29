@@ -9,7 +9,8 @@ data class UserData(
     var name: String? = null,
     var phoneNumber: String? = null,
     var imageUrl: String? = null,
-    var availability: Availability = Availability.OFFLINE
+    var availability: Availability = Availability.OFFLINE,
+    var city:String? =null
 )
 
 data class ChatData(
@@ -22,7 +23,8 @@ data class ChatUser(
     val userId: String? = "",
     val name: String? = "",
     val phoneNumber: String? = "",
-    val imageUrl: String? = ""
+    val imageUrl: String? = "",
+    val city:String? =null
 )
 
 data class Message(

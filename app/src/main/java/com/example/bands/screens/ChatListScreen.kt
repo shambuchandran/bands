@@ -90,13 +90,10 @@ fun ChatListScreen(
             showDialog.value = false
             showChildFab.value = false
         }
-
         val onAddAiChat: () -> Unit = {
-
             viewModel.toggleStickyHeader()
             showDialog.value = false
             showChildFab.value = false
-
         }
         val context = LocalContext.current
         val localViewRenderer = remember { SurfaceViewRenderer(context) }

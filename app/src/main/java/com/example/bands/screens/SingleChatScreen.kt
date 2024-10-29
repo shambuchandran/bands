@@ -7,11 +7,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -19,10 +21,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.Call
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
@@ -30,6 +35,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -48,10 +54,14 @@ import androidx.navigation.NavController
 import com.example.bands.DestinationScreen
 import com.example.bands.R
 import com.example.bands.data.Message
+import com.example.bands.data.api.WeatherModel
 import com.example.bands.di.BandsViewModel
 import com.example.bands.di.CallViewModel
+import com.example.bands.di.WeatherViewModel
 import com.example.bands.utils.CommonImage
+import com.example.bands.utils.WeatherShowText
 import com.example.bands.utils.navigateTo
+import com.example.bands.weatherupdates.NetworkResponse
 import org.webrtc.SurfaceViewRenderer
 
 
@@ -60,8 +70,10 @@ fun SingleChatScreen(
     navController: NavController,
     viewModel: BandsViewModel,
     callViewModel: CallViewModel,
-    chatId: String
+    chatId: String,
+    weatherViewModel:WeatherViewModel
 ) {
+    val chatUserCityNameResult=weatherViewModel.chatUserCityName.observeAsState()
     var reply by rememberSaveable { mutableStateOf("") }
     val onSendReply = {
         if (reply.isNotBlank()) {
@@ -77,8 +89,11 @@ fun SingleChatScreen(
     val isAudioCallUi =callViewModel.isAudioCall.collectAsState()
     val isInCall = callViewModel.isInCall.collectAsState()
 
+
+
     LaunchedEffect(key1 = Unit) {
         viewModel.loadMessages(chatId)
+        weatherViewModel.fetchWeatherDataFromDatabase(city = chatUser.city?:"")
     }
 
     BackHandler {
@@ -87,6 +102,21 @@ fun SingleChatScreen(
         }
         navigateTo(navController, DestinationScreen.ChatList.route)
         viewModel.releaseMessages()
+    }
+    val chatUserWeatherData: WeatherModel? = when (val result = chatUserCityNameResult.value)
+    {
+        is NetworkResponse.Error -> {
+            null
+        }
+        NetworkResponse.Loading -> {
+            null
+        }
+        is NetworkResponse.Success -> {
+            result.data
+        }
+        null -> {
+            null
+        }
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -99,9 +129,11 @@ fun SingleChatScreen(
                 MainVideoCallUI(callViewModel)
             }
         } else {
+
             ChatHeader(
                 name = chatUser.name ?: "",
                 imageUrl = chatUser.imageUrl ?: "",
+                chatUserWeatherData,
                 onBacKClicked = {
                     navController.popBackStack()
                     viewModel.releaseMessages()
@@ -209,66 +241,97 @@ fun ReplyBox(reply: String, onReplyChange: (String) -> Unit, onSendReply: () -> 
 }
 
 @Composable
-fun ChatHeader(name: String, imageUrl: String, onBacKClicked: () -> Unit,onStartCallButtonClicked:() -> Unit,onStartAudioCallButtonClicked: () -> Unit) {
-    Row(
-        Modifier
+fun ChatHeader(name: String, imageUrl: String,data: WeatherModel? = null, onBacKClicked: () -> Unit,onStartCallButtonClicked:() -> Unit,onStartAudioCallButtonClicked: () -> Unit) {
+    val expanded = remember { mutableStateOf(false) }
+    Surface(
+        modifier = Modifier
             .fillMaxWidth()
-            .height(88.dp)
-            .clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
-            .background(colorResource(id = R.color.BgColor)),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-
-        Row(
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                Icons.AutoMirrored.Rounded.KeyboardArrowLeft,
-                contentDescription = "back",
+            .wrapContentHeight()
+            .defaultMinSize(minHeight = 74.dp)
+        ,
+        color = colorResource(id = R.color.BgColor),
+        shape = RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp),
+        shadowElevation = 8.dp,
+        tonalElevation = 8.dp,
+    ){
+        Column {
+            Row(
                 Modifier
-                    .clickable { onBacKClicked.invoke() }
-                    .padding(4.dp)
-            )
-            CommonImage(
-                data = imageUrl,
-                modifier = Modifier
-                    .padding(4.dp)
-                    .size(50.dp)
-                    .clip(CircleShape)
-            )
-            Text(
-                text = name,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(start = 4.dp)
-            )
-        }
+                    .fillMaxWidth()
+                    //.height(88.dp)
+                    .padding(top = 8.dp)
+                    .clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
+                    .background(colorResource(id = R.color.BgColor)),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Rounded.KeyboardArrowLeft,
+                        contentDescription = "back",
+                        Modifier
+                            .clickable { onBacKClicked.invoke() }
+                            .padding(4.dp)
+                    )
+                    CommonImage(
+                        data = imageUrl,
+                        modifier = Modifier
+                            .padding(4.dp)
+                            .size(50.dp)
+                            .clip(CircleShape)
+                    )
+                    Text(
+                        text = name,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(start = 4.dp)
+                    )
+                }
 
 
-        Row(
-            horizontalArrangement = Arrangement.End,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                Icons.Rounded.Call,
-                contentDescription = "audioCall",
-                Modifier
-                    .clickable { onStartAudioCallButtonClicked.invoke() }
-                    .size(50.dp)
-                    .padding(end = 8.dp)
-            )
-            Icon(
-                painter = painterResource(id = R.drawable.baseline_videocam_24),
-                contentDescription = "videoCall",
-                Modifier
-                    .clickable { onStartCallButtonClicked.invoke() }
-                    .size(50.dp)
-                    .padding(end = 8.dp)
-            )
+                Row(
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Rounded.Call,
+                        contentDescription = "audioCall",
+                        Modifier
+                            .clickable { onStartAudioCallButtonClicked.invoke() }
+                            .size(50.dp)
+                            .padding(end = 8.dp)
+                    )
+                    Icon(
+                        painter = painterResource(id = R.drawable.baseline_videocam_24),
+                        contentDescription = "videoCall",
+                        Modifier
+                            .clickable { onStartCallButtonClicked.invoke() }
+                            .size(50.dp)
+                            .padding(end = 8.dp)
+                    )
+                }
+            }
+            if (data != null) {
+                IconButton(
+                    onClick = { expanded.value = !expanded.value },
+                    modifier = Modifier
+                        .offset(x = (-8).dp, y = (-8).dp)
+                        .size(20.dp)
+                        .align(Alignment.End)
+                ) {
+                    Icon(
+                        imageVector = if (expanded.value) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                        contentDescription = "Expand/Collapse"
+                    )
+                }
+            }
+            if (expanded.value && data != null) {
+                WeatherShowText(data)
+            }
         }
     }
-
-
 }
 
 @Composable

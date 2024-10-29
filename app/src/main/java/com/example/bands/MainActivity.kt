@@ -4,6 +4,7 @@ import android.Manifest
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -132,7 +133,8 @@ class MainActivity : FragmentActivity() {
                             navController,
                             viewModel,
                             chatId = it,
-                            callViewModel = callViewModel
+                            callViewModel = callViewModel,
+                            weatherViewModel=weatherViewModel
                         )
                     }
 

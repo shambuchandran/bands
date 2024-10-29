@@ -10,6 +10,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.text.isDigitsOnly
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelStoreOwner
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.volley.Response
 import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
@@ -34,6 +37,7 @@ import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.firestore.Filter
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.toObject
 import com.google.firebase.firestore.toObjects
 import com.google.firebase.messaging.FirebaseMessaging
@@ -57,8 +61,10 @@ class BandsViewModel @Inject constructor(
     val auth: FirebaseAuth,
     var db: FirebaseFirestore,
     var storage: FirebaseStorage,
-     @ApplicationContext val context: Context
+     @ApplicationContext val context: Context,
 ) : ViewModel(){
+
+
     var inProgress = mutableStateOf(false)
     var inProgressChats = mutableStateOf(false)
     var eventMutableState = mutableStateOf<Event<String>?>(null)
@@ -175,43 +181,57 @@ class BandsViewModel @Inject constructor(
         name: String? = null,
         phoneNumber: String? = null,
         imageUrl: String? = null,
-        availability: Availability=Availability.OFFLINE
+        availability: Availability=Availability.OFFLINE,
+        city:String? = null
     ) {
-        val uid = auth.currentUser?.uid
+        val uid = auth.currentUser?.uid ?:return
         Log.d("bandsView-uid",uid.toString())
         val userData = UserData(
             userId = uid,
             name = name ?: this.userData.value?.name,
             phoneNumber = phoneNumber ?: this.userData.value?.phoneNumber,
             imageUrl = imageUrl ?: this.userData.value?.imageUrl,
-            availability= availability
+            availability= availability,
+            city = city
         )
-        uid.let {
-            inProgress.value = true
-            db.collection(USER_NODE).document(uid!!).get().addOnSuccessListener {
-                if (it.exists()) {
-                    db.collection(USER_NODE).document(uid).set(userData).addOnSuccessListener {
-                        inProgress.value = false
-                        getUserData(uid)
-                        updateUserDetailsInChatsAndStatus(userData)
-                        updateAvailability(Availability.ONLINE)
-                    }.addOnFailureListener {
-                        handleException(it, customMessage = "Cannot update user")
-                        Log.d("createOrUpdateProfile on success",it.toString())
-                        inProgress.value = false
-                    }
-                } else {
-                    db.collection(USER_NODE).document(uid).set(userData)
-                    inProgress.value = false
-                    getUserData(uid)
-                    updateAvailability(Availability.ONLINE)
-                }
-            }.addOnFailureListener {
-                handleException(it, "Cannot retrieve User")
-                Log.d("createOrUpdateProfile on fail",it.toString())
+//        uid.let {
+//            inProgress.value = true
+//            db.collection(USER_NODE).document(uid!!).get().addOnSuccessListener {
+//                if (it.exists()) {
+//                    db.collection(USER_NODE).document(uid).set(userData).addOnSuccessListener {
+//                        inProgress.value = false
+//                        getUserData(uid)
+//                        updateUserDetailsInChatsAndStatus(userData)
+//                        updateAvailability(Availability.ONLINE)
+//                    }.addOnFailureListener {
+//                        handleException(it, customMessage = "Cannot update user")
+//                        Log.d("createOrUpdateProfile on success",it.toString())
+//                        inProgress.value = false
+//                    }
+//                } else {
+//                    db.collection(USER_NODE).document(uid).set(userData)
+//                    inProgress.value = false
+//                    getUserData(uid)
+//                    updateAvailability(Availability.ONLINE)
+//                }
+//            }.addOnFailureListener {
+//                handleException(it, "Cannot retrieve User")
+//                Log.d("createOrUpdateProfile on fail",it.toString())
+//                inProgress.value = false
+//            }
+//        }
+        db.collection(USER_NODE).document(uid).set(userData, SetOptions.merge())
+            .addOnSuccessListener {
+                inProgress.value = false
+                getUserData(uid)
+                updateUserDetailsInChatsAndStatus(userData)
+                updateAvailability(Availability.ONLINE)
+            }
+            .addOnFailureListener {
+                handleException(it, customMessage = "Cannot update user")
+                Log.d("createOrUpdateProfile on fail", it.toString())
                 inProgress.value = false
             }
-        }
     }
 
     fun updateUserDetailsInChatsAndStatus(updatedUserData: UserData){
@@ -306,13 +326,15 @@ class BandsViewModel @Inject constructor(
                                         userData.value?.userId,
                                         userData.value?.name,
                                         userData.value?.phoneNumber,
-                                        userData.value?.imageUrl
+                                        userData.value?.imageUrl,
+                                        userData.value?.city
                                     ),
                                     user2 = ChatUser(
                                         chatPartner.userId,
                                         chatPartner.name,
                                         chatPartner.phoneNumber,
-                                        chatPartner.imageUrl
+                                        chatPartner.imageUrl,
+                                        chatPartner.city
                                     )
                                 )
                                 db.collection(CHATS).document(id).set(chatData)

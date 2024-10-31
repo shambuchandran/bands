@@ -1,5 +1,6 @@
 package com.example.bands.screens
 
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -10,14 +11,18 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
@@ -28,19 +33,24 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import com.example.bands.DestinationScreen
 import com.example.bands.data.api.WeatherModel
@@ -67,7 +77,7 @@ fun ChatListScreen(
     if (inProgress.value) {
         CommonProgressBar()
     } else {
-        val weatherResult=weatherViewModel.weatherResult.observeAsState()
+        val weatherResult = weatherViewModel.weatherResult.observeAsState()
         val chats = viewModel.chats.value
         val userData = viewModel.userData.value
         val showDialog = remember {
@@ -95,21 +105,28 @@ fun ChatListScreen(
             showDialog.value = false
             showChildFab.value = false
         }
+        val showDialogChatDelete = remember {
+            mutableStateOf(false)
+        }
+        var chatIdToDelete by remember { mutableStateOf("") }
+
         val context = LocalContext.current
         val localViewRenderer = remember { SurfaceViewRenderer(context) }
         val remoteViewRenderer = remember { SurfaceViewRenderer(context) }
 
-        val weatherData: WeatherModel? = when (val result = weatherResult.value)
-        {
+        val weatherData: WeatherModel? = when (val result = weatherResult.value) {
             is NetworkResponse.Error -> {
                 null
             }
+
             NetworkResponse.Loading -> {
                 null
             }
+
             is NetworkResponse.Success -> {
                 result.data
             }
+
             null -> {
                 null
             }
@@ -174,7 +191,7 @@ fun ChatListScreen(
                         .fillMaxSize()
                         .padding(it)
                 ) {
-                    CommonTitleText(text = "Chats",weatherData)
+                    CommonTitleText(text = "Chats", weatherData)
                     if (chats.isEmpty()) {
                         Column(
                             modifier = Modifier
@@ -194,11 +211,13 @@ fun ChatListScreen(
                             if (showStickyHeader) {
                                 stickyHeader {
                                     CommonRow(
-                                        imageUrl ="",
+                                        imageUrl = "",
                                         name = "Gem Bot",
-                                    ) {
-                                        navController.navigate(DestinationScreen.GemChatPage.route)
-                                    }
+                                        onItemClick = {
+                                            navController.navigate(DestinationScreen.GemChatPage.route)
+                                        },
+                                        onLongClick = {}
+                                    )
                                 }
                             }
                             items(chats) { chat ->
@@ -206,16 +225,33 @@ fun ChatListScreen(
                                     if (chat.user1.userId == userData?.userId) chat.user2 else chat.user1
                                 CommonRow(
                                     imageUrl = chatUser.imageUrl,
-                                    name = chatUser.name
-                                ) {
-                                    chat.chatId?.let {
-                                        navigateTo(
-                                            navController,
-                                            DestinationScreen.SingleChat.createRoute(id = it)
-                                        )
+                                    name = chatUser.name,
+                                    onItemClick = {
+                                        chat.chatId?.let {
+                                            navigateTo(
+                                                navController,
+                                                DestinationScreen.SingleChat.createRoute(id = it)
+                                            )
+                                        }
+                                    },
+                                    onLongClick = {
+                                        chatIdToDelete = chat.chatId ?: ""
+                                        showDialogChatDelete.value = true
                                     }
-                                }
+                                )
                             }
+                        }
+                        if (showDialogChatDelete.value) {
+                            ConfirmationDialog(
+                                title = "Delete Chat",
+                                message = "Are you sure you want to delete this chat?",
+                                onConfirm = {
+                                    //viewModel.deleteChatById(chatIdToDelete)
+                                    Toast.makeText(context,"deleted",Toast.LENGTH_SHORT).show()
+                                    showDialogChatDelete.value = false
+                                },
+                                onDismiss = { showDialogChatDelete.value = false }
+                            )
                         }
                     }
                     BottomNavigationMenu(
@@ -225,7 +261,6 @@ fun ChatListScreen(
                 }
             })
     }
-
 }
 
 @Composable
@@ -239,24 +274,52 @@ fun Fab(
         mutableStateOf("")
     }
     if (showDialog) {
-        AlertDialog(onDismissRequest = {
-            onDismiss.invoke()
+        Dialog(onDismissRequest = {
+            onDismiss()
             addChatNumber.value = ""
-        }, confirmButton = {
-            Button(onClick = { onAddChat(addChatNumber.value) }) {
-                Text(text = "Add Chat")
+        }) {
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = Color.White.copy(alpha = 0.7f),
+                tonalElevation = 12.dp,
+                shadowElevation = 6.dp,
+                modifier = Modifier.padding(16.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "Add Chat",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(14.dp))
+                    OutlinedTextField(
+                        value = addChatNumber.value,
+                        onValueChange = { addChatNumber.value = it },
+                        label = { Text("Phone Number") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
+                    )
+                    Spacer(modifier = Modifier.height(14.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)
+                    ) {
+                        Button(onClick = onDismiss) {
+                            Text("Cancel")
+                        }
+                        Button(onClick = {
+                            onAddChat(addChatNumber.value)
+                            addChatNumber.value = ""
+                            onDismiss()
+                        }) {
+                            Text("Add Chat")
+                        }
+                    }
+                }
             }
-        },
-            title = { Text(text = "Add Chat") },
-            text = {
-                OutlinedTextField(
-                    value = addChatNumber.value,
-                    label = { Text(text = "Phone Number") },
-                    onValueChange = { addChatNumber.value = it },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                )
-            })
-
+        }
     }
     FloatingActionButton(
         onClick = { onFabClick() },
@@ -271,6 +334,45 @@ fun Fab(
         )
 
     }
-
-
+}
+@Composable
+fun ConfirmationDialog(
+    title: String,
+    message: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = Color.White.copy(alpha = 0.5f),
+            tonalElevation = 12.dp,
+            shadowElevation = 6.dp,
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(text = title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(text = message, style = MaterialTheme.typography.bodyMedium)
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Button(onClick = onDismiss) {
+                        Text("Cancel")
+                    }
+                    Button(onClick = {
+                        onConfirm()
+                        onDismiss()
+                    }) {
+                        Text("Delete")
+                    }
+                }
+            }
+        }
+    }
 }

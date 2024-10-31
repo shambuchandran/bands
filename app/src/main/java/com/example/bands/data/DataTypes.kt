@@ -28,9 +28,11 @@ data class ChatUser(
 )
 
 data class Message(
+    val id: String = "",
     val sendBy: String? = "",
     val message: String? = "",
     val timeStamp: String? = "",
+    var reactions: MutableList<String> = mutableListOf()
 )
 
 data class Status(

@@ -1,11 +1,17 @@
+@file:OptIn(ExperimentalFoundationApi::class)
+
 package com.example.bands.utils
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.MarqueeAnimationMode
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -49,6 +55,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.FontWeight
@@ -67,6 +74,7 @@ import com.example.bands.data.MessageModel
 import com.example.bands.data.api.WeatherModel
 import com.example.bands.di.BandsViewModel
 import com.example.bands.ui.theme.Typography
+import java.util.UUID
 
 fun navigateTo(navController: NavController, route: String) {
     navController.navigate(route) {
@@ -155,12 +163,20 @@ fun CommonRow(
     imageUrl: String?,
     name: String?,
     onItemClick: () -> Unit,
+    onLongClick: () -> Unit
 ) {
+    val key = remember { UUID.randomUUID() }
     Surface(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 8.dp, vertical = 3.dp)
-            .clickable { onItemClick.invoke() },
+//            .clickable { onItemClick.invoke() },
+            .pointerInput(key) {
+                detectTapGestures(
+                    onTap = { onItemClick() },
+                    onLongPress = { onLongClick() }
+                )
+            },
         shape = RoundedCornerShape(8.dp),
         tonalElevation = 4.dp,
         shadowElevation = 4.dp,

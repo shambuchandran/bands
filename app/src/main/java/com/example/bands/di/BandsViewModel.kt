@@ -10,9 +10,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.text.isDigitsOnly
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.ViewModelStoreOwner
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.viewModelScope
 import com.android.volley.Response
 import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
@@ -48,6 +46,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import org.json.JSONObject
 import java.util.Calendar
 import java.util.UUID
@@ -71,7 +71,9 @@ class BandsViewModel @Inject constructor(
     var signIn = mutableStateOf(false)
     val userData = mutableStateOf<UserData?>(null)
     val chats = mutableStateOf<List<ChatData>>(listOf())
-    val chatMessages = mutableStateOf<List<Message>>(listOf())
+    //val chatMessages = mutableStateOf<List<Message>>(listOf())
+    private val _chatMessages = MutableStateFlow<List<Message>>(emptyList())
+    val chatMessages: StateFlow<List<Message>> = _chatMessages.asStateFlow()
     var inProgressChatMessages = mutableStateOf(false)
     var currentChatListener: ListenerRegistration? = null
     var showStickyHeader by mutableStateOf(false)
@@ -103,9 +105,6 @@ class BandsViewModel @Inject constructor(
     fun toggleStickyHeader() {
         showStickyHeader = !showStickyHeader
     }
-
-
-
     fun signUp(name: String, phoneNumber: String, email: String, password: String) {
         inProgress.value = true
         if (name.isEmpty() or phoneNumber.isEmpty() or email.isEmpty() or password.isEmpty()) {
@@ -376,6 +375,36 @@ class BandsViewModel @Inject constructor(
 
         }
     }
+    fun deleteChatById(chatId: String) {
+        viewModelScope.launch {
+            try {
+                db.collection("chats").document(chatId).delete().await()
+                chats.value = chats.value.filterNot { it.chatId == chatId }
+            } catch (e: Exception) {
+                Log.e("BandsViewModel", "Error deleting chat: ${e.message}")
+            }
+        }
+    }
+
+
+    fun deleteAllMessagesInChat(chatId: String) {
+        inProgressChats.value = true
+        val chatMessagesRef = db.collection("chats").document(chatId).collection("message")
+        chatMessagesRef.get()
+            .addOnSuccessListener { querySnapshot ->
+                for (document in querySnapshot.documents) {
+                    document.reference.delete()
+                }
+                _chatMessages.value = emptyList()
+                eventMutableState.value = Event("All chats deleted successfully")
+            }
+            .addOnFailureListener { exception ->
+                eventMutableState.value = Event("Error deleting chats: ${exception.message}")
+            }
+            .addOnCompleteListener {
+                inProgressChats.value = false
+            }
+    }
 
     private fun getUserData(uid: String) {
         inProgress.value = true
@@ -399,8 +428,10 @@ class BandsViewModel @Inject constructor(
 
     fun onSendReply(chatId: String, message: String) {
         val time = Calendar.getInstance().time.toString()
-        val chatMessage = Message(userData.value?.userId, message, time)
-        db.collection(CHATS).document(chatId).collection(MESSAGE).document().set(chatMessage)
+        val messageId = UUID.randomUUID().toString()
+        val chatMessage = Message(id = messageId,userData.value?.userId, message, time)
+        _chatMessages.value += chatMessage
+        db.collection(CHATS).document(chatId).collection(MESSAGE).document(messageId).set(chatMessage)
             .addOnCompleteListener { task ->
             if (task.isSuccessful) {
                 val senderId = chatMessage.sendBy
@@ -419,18 +450,46 @@ class BandsViewModel @Inject constructor(
 
     }
 
+    fun addReactionToMessage(chatId: String,messageId: String, emoji: String) {
+        val messageToUpdate = chatMessages.value.find { it.id == messageId }
+        messageToUpdate?.let {
+            if (it.reactions.contains(emoji)) {
+                it.reactions.remove(emoji)
+            } else {
+                it.reactions.add(emoji)
+            }
+            _chatMessages.value = chatMessages.value.map { msg ->
+                if (msg.id == messageId) {
+                    msg.copy(reactions = it.reactions)
+                } else {
+                    msg
+                }
+            }
+            db.collection(CHATS).document(chatId)
+                .collection(MESSAGE).document(it.id)
+                .update("reactions", it.reactions)
+                .addOnSuccessListener {
+                    Log.d("addReactionToMessage", "Reaction updated successfully")
+                }
+                .addOnFailureListener { e ->
+                    Log.e("addReactionToMessage", "Error updating reaction: ${e.message}")
+                }
+        }
+    }
+
     fun loadMessages(chatId: String) {
         inProgressChatMessages.value = true
         currentChatListener = db.collection(CHATS).document(chatId).collection(MESSAGE)
             .addSnapshotListener { value, error ->
+                inProgressChatMessages.value = false
                 if (error != null) {
                     handleException(error)
                 }
                 if (value != null) {
-                    chatMessages.value = value.documents.mapNotNull {
+                    _chatMessages.value = value.documents.mapNotNull {
                         it.toObject<Message>()
                     }.sortedBy { it.timeStamp }
-                    inProgressChatMessages.value = false
+
                 }
             }
         subscribeForNotification(chatId)
@@ -491,7 +550,7 @@ class BandsViewModel @Inject constructor(
     }
 
     fun releaseMessages() {
-        chatMessages.value = listOf()
+        _chatMessages.value = emptyList()
         currentChatListener = null
     }
 

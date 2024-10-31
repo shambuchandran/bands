@@ -186,7 +186,7 @@ fun StatusScreen(navController: NavController, viewModel: BandsViewModel,weather
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "News Today",
+                            text = "Top Headlines",
                             modifier = Modifier
                                 .align(Alignment.Start)
                                 .padding(4.dp)

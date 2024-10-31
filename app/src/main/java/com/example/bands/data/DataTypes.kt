@@ -32,7 +32,8 @@ data class Message(
     val sendBy: String? = "",
     val message: String? = "",
     val timeStamp: String? = "",
-    var reactions: MutableList<String> = mutableListOf()
+    var reactions: MutableList<String> = mutableListOf(),
+    val imageUrl: String? = null
 )
 
 data class Status(

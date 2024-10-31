@@ -5,6 +5,7 @@ import android.app.Activity
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -474,6 +475,59 @@ class BandsViewModel @Inject constructor(
                 .addOnFailureListener { e ->
                     Log.e("addReactionToMessage", "Error updating reaction: ${e.message}")
                 }
+        }
+    }
+    private suspend fun uploadImage(imageUri: Uri): String? {
+        return try {
+            val storageRef = storage.reference.child("chat_images/${UUID.randomUUID()}.jpg")
+            storageRef.putFile(imageUri).await()
+            val downloadUrl = storageRef.downloadUrl.await().toString()
+            downloadUrl
+        } catch (e: Exception) {
+            Log.e("uploadImage", "Failed to upload image: ${e.message}")
+            null
+        }
+    }
+    fun sendImageMessage(chatId: String, imageUri: Uri) {
+        viewModelScope.launch {
+            try {
+                val imageUrl = uploadImage(imageUri)
+                if (imageUrl != null) {
+                    val messageId = UUID.randomUUID().toString()
+                    val timeStamp = Calendar.getInstance().time.toString()
+                    val imageMessage = Message(id = messageId, sendBy = userData.value?.userId, imageUrl = imageUrl, timeStamp = timeStamp)
+                    _chatMessages.value += imageMessage
+                    db.collection(CHATS).document(chatId).collection(MESSAGE).document(messageId).set(imageMessage)
+                        .addOnCompleteListener { task ->
+                            if (!task.isSuccessful) {
+                                Log.e("sendImageMessage", "Failed to send image message")
+                            }
+                        }
+                } else {
+                    Log.e("sendImageMessage", "Failed to upload image")
+                }
+            } catch (e: Exception) {
+                Log.e("sendImageMessage", "Error sending image message: ${e.message}")
+            }
+        }
+    }
+
+    fun deleteMessage(chatId: String, messageId: String) {
+        viewModelScope.launch {
+            try {
+                db.collection(CHATS).document(chatId).collection(MESSAGE).document(messageId).delete()
+                    .addOnSuccessListener {
+                        _chatMessages.value = _chatMessages.value.filter { it.id != messageId }
+                        Toast.makeText(context, "Message deleted", Toast.LENGTH_SHORT).show()
+                    }
+                    .addOnFailureListener { e ->
+                        Log.e("deleteMessage", "Error deleting message: ${e.message}")
+                        Toast.makeText(context, "Failed to delete message", Toast.LENGTH_SHORT).show()
+                    }
+            } catch (e: Exception) {
+                Log.e("deleteMessage", "Error deleting message: ${e.message}")
+                Toast.makeText(context, "Failed to delete message", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 

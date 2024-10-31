@@ -1,9 +1,13 @@
 package com.example.bands.screens
 
+import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,10 +32,13 @@ import androidx.compose.material.DropdownMenuItem
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.rounded.AddCircle
 import androidx.compose.material.icons.rounded.Call
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -43,6 +50,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -56,6 +64,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -64,6 +73,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
+import coil.compose.rememberAsyncImagePainter
 import com.example.bands.DestinationScreen
 import com.example.bands.R
 import com.example.bands.data.Message
@@ -106,7 +116,19 @@ fun SingleChatScreen(
     val chatMessages by viewModel.chatMessages.collectAsState()
     val isAudioCallUi = callViewModel.isAudioCall.collectAsState()
     val isInCall = callViewModel.isInCall.collectAsState()
-
+    val context = LocalContext.current
+    val launcher =
+        rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri: Uri? ->
+            uri?.let {
+                viewModel.sendImageMessage(chatId, it)
+                Toast.makeText(context, "Image selected!", Toast.LENGTH_SHORT).show()
+            }
+        }
+    val onImageSelected: () -> Unit = {
+        launcher.launch("image/*")
+    }
+    val showDeleteIcon = remember { mutableStateOf(false) }
+    val selectedMessageId = remember { mutableStateOf<String?>(null) }
 
 
 
@@ -168,6 +190,13 @@ fun SingleChatScreen(
                 },
                 onStartAudioCallButtonClicked = {
                     chatUser.phoneNumber?.let { callViewModel.startAudioCall(it) }
+                },
+                showDeleteIcon = showDeleteIcon,
+                selectedMessageId = selectedMessageId,
+                onDeleteMessage = {
+                    if (it != null) {
+                        viewModel.deleteMessage(chatId,it)
+                    }
                 }
             )
             MessageBox(
@@ -177,15 +206,23 @@ fun SingleChatScreen(
                 chatId,
                 chatMessages = chatMessages,
                 currentUserId = mainUser?.userId ?: "",
-                viewModel
+                viewModel,
+                showDeleteIcon,
+                selectedMessageId
             )
-            ReplyBox(reply = reply, onReplyChange = { reply = it }, onSendReply = onSendReply)
+            ReplyBox(
+                reply = reply,
+                onReplyChange = { reply = it },
+                onSendReply = onSendReply,
+                onSelectImage = onImageSelected
+            )
         }
     }
 }
+
 fun formatTimestamp(timestampString: String?): String {
     val formatter = DateTimeFormatter.ofPattern("EEE MMM dd HH:mm:ss z yyyy", Locale.ENGLISH)
-    val timestamp = LocalDateTime.parse(timestampString,formatter)
+    val timestamp = LocalDateTime.parse(timestampString, formatter)
     val displayFormatter = DateTimeFormatter.ofPattern("h:mm a")
     return timestamp.format(displayFormatter)
 }
@@ -197,14 +234,18 @@ fun EmojiPicker(
 ) {
     val initialEmojis = listOf("👍🏻", "❤️", "😂", "😮", "😢", "😡", "😎")
     val allEmojis = listOf(
-        "👍🏻", "❤️", "😂", "😮", "😢", "😎","😡",
+        "👍🏻", "❤️", "😂", "😮", "😢", "😎", "😡",
         "👏🏻", "👌🏻", "🤲🏻", "🙏🏻", "🤗", "🤩",
         "🔥", "✨", "💯", "🤘", "🚀", "🌈",
         "🌟", "🎉", "💥", "🥂", "🎶"
     )
     var expanded by remember { mutableStateOf(false) }
-    Column( horizontalAlignment = Alignment.CenterHorizontally) {
-        LazyRow(Modifier.wrapContentSize().align(Alignment.CenterHorizontally)) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        LazyRow(
+            Modifier
+                .wrapContentSize()
+                .align(Alignment.CenterHorizontally)
+        ) {
             val emojisToShow = if (expanded) allEmojis else initialEmojis
             items(emojisToShow) { emoji ->
                 Text(
@@ -217,7 +258,8 @@ fun EmojiPicker(
             }
             item {
                 Box(
-                    modifier = Modifier.padding(4.dp)
+                    modifier = Modifier
+                        .padding(4.dp)
                         .clip(CircleShape)
                         .background(Color.LightGray)
                         .clickable { expanded = !expanded },
@@ -242,8 +284,10 @@ fun MessageBox(
     chatId: String,
     chatMessages: List<Message>,
     currentUserId: String,
-    viewModel: BandsViewModel
-) {
+    viewModel: BandsViewModel,
+    showDeleteIcon: MutableState<Boolean>,
+    selectedMessageId: MutableState<String?>,
+    ) {
     LazyColumn(
         modifier = modifier,
         reverseLayout = true
@@ -262,18 +306,44 @@ fun MessageBox(
                     .padding(horizontal = 4.dp)
                     .pointerInput(Unit) {
                         detectTapGestures(
-                            onTap = { showEmojiPicker=false },
-                            onLongPress = { showEmojiPicker = true }
+                            onTap = {
+                                showEmojiPicker = false
+                                showDeleteIcon.value=false
+                                    },
+                            onLongPress = {
+                                showEmojiPicker = !showEmojiPicker
+                                selectedMessageId.value=message.id
+                                showDeleteIcon.value = true
+                            }
                         )
                     },
                 horizontalAlignment = alignment
             ) {
+                if (showEmojiPicker) {
+                    EmojiPicker(
+                        onEmojiSelected = { emoji ->
+                            viewModel.addReactionToMessage(chatId, message.id, emoji)
+                            showEmojiPicker = false
+                        },
+                        modifier = Modifier.align(alignment)
+                    )
+                }
                 Column(
                     modifier = Modifier
                         .clip(RoundedCornerShape(16.dp))
                         .background(color)
                         .padding(12.dp)
                 ) {
+                    if (message.imageUrl != null) {
+                        Image(
+                            painter = rememberAsyncImagePainter(model = message.imageUrl),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .height(200.dp)
+                                .wrapContentSize()
+                                .clip(RoundedCornerShape(8.dp))
+                        )
+                    }
                     Text(
                         text = message.message ?: "",
                         color = Color.White,
@@ -290,7 +360,7 @@ fun MessageBox(
                             color = Color.Transparent,
                             shape = RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp)
                         )
-                        .padding( 4.dp)
+                        .padding(4.dp)
                 ) {
                     message.reactions.forEach { reaction ->
                         Text(
@@ -311,24 +381,19 @@ fun MessageBox(
                     color = Color.LightGray,
                     modifier = Modifier.align(alignment)
                 )
-                if (showEmojiPicker) {
-                    EmojiPicker(
-                        onEmojiSelected = { emoji ->
-                            viewModel.addReactionToMessage(chatId, message.id, emoji)
-                            showEmojiPicker = false
-                        },
-                        modifier = Modifier.align(alignment)
-                    )
-                }
             }
         }
     }
 }
 
 
-
 @Composable
-fun ReplyBox(reply: String, onReplyChange: (String) -> Unit, onSendReply: () -> Unit) {
+fun ReplyBox(
+    reply: String,
+    onReplyChange: (String) -> Unit,
+    onSendReply: () -> Unit,
+    onSelectImage: () -> Unit
+) {
     Column(
         Modifier
             .fillMaxWidth()
@@ -341,7 +406,6 @@ fun ReplyBox(reply: String, onReplyChange: (String) -> Unit, onSendReply: () -> 
                 .padding(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // TextField for input
             TextField(
                 value = reply,
                 onValueChange = onReplyChange,
@@ -356,9 +420,15 @@ fun ReplyBox(reply: String, onReplyChange: (String) -> Unit, onSendReply: () -> 
                     disabledContainerColor = Color(0xFFD8CFC4), //0xFFD8CFC4
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent,
-                )
+                ), trailingIcon = {
+                    IconButton(onClick = onSelectImage) {
+                        Icon(
+                            imageVector = Icons.Rounded.AddCircle,
+                            contentDescription = "add image"
+                        )
+                    }
+                }
             )
-            // Circular Send Button
             IconButton(
                 onClick = onSendReply,
                 modifier = Modifier
@@ -387,11 +457,16 @@ fun ChatHeader(
     onDeleteChat: () -> Unit,
     onBacKClicked: () -> Unit,
     onStartCallButtonClicked: () -> Unit,
-    onStartAudioCallButtonClicked: () -> Unit
+    onStartAudioCallButtonClicked: () -> Unit,
+    showDeleteIcon: MutableState<Boolean>,
+    selectedMessageId: MutableState<String?>,
+    onDeleteMessage: (String?) -> Unit
 ) {
     val expanded = remember { mutableStateOf(false) }
     val menuExpanded = remember { mutableStateOf(false) }
     val showDialog = remember { mutableStateOf(false) }
+    val showDeleteMessageDialog = remember { mutableStateOf(false) }
+
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -459,17 +534,33 @@ fun ChatHeader(
                             .size(50.dp)
                             .padding(end = 8.dp)
                     )
+                    if (showDeleteIcon.value) {
+                        IconButton(onClick = {
+                            showDeleteMessageDialog.value = true
+
+                        }) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "delete message"
+                            )
+                        }
+                    }
                     IconButton(onClick = { menuExpanded.value = !menuExpanded.value }) {
                         Icon(
                             imageVector = Icons.Default.MoreVert,
                             contentDescription = "clear Chat"
                         )
                     }
-                    DropdownMenu(expanded = menuExpanded.value, onDismissRequest = { menuExpanded.value=false }) {
-                        DropdownMenuItem(onClick = {
-                            showDialog.value = true
-                            menuExpanded.value=false
-                        },) {
+
+                    DropdownMenu(
+                        expanded = menuExpanded.value,
+                        onDismissRequest = { menuExpanded.value = false }) {
+                        DropdownMenuItem(
+                            onClick = {
+                                showDialog.value = true
+                                menuExpanded.value = false
+                            },
+                        ) {
                             Text(text = "Clear Chat", color = Color.White)
                         }
                     }
@@ -483,6 +574,20 @@ fun ChatHeader(
                     },
                     onDismiss = { showDialog.value = false }
                 )
+            }
+            if (showDeleteMessageDialog.value){
+                ConfirmationDialogForDeleteMessage(
+                    onConfirm = {
+                        onDeleteMessage(selectedMessageId.value)
+                        showDeleteMessageDialog.value=false
+                        showDeleteIcon.value=false
+                    },
+                    onDismiss = {
+                        showDeleteIcon.value=false
+                        showDeleteMessageDialog.value=false
+                    }
+                )
+
             }
 
             if (data != null) {
@@ -506,6 +611,7 @@ fun ChatHeader(
     }
 
 }
+
 @Composable
 fun ConfirmationDialog(
     onConfirm: () -> Unit,
@@ -523,7 +629,11 @@ fun ConfirmationDialog(
                 modifier = Modifier.padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(text = "Delete all chats?", style = MaterialTheme.typography.h6,fontWeight = FontWeight.Bold )
+                Text(
+                    text = "Delete all chats?",
+                    style = MaterialTheme.typography.h6,
+                    fontWeight = FontWeight.Bold
+                )
                 Spacer(modifier = Modifier.height(16.dp))
                 Row(
                     horizontalArrangement = Arrangement.SpaceEvenly,
@@ -544,6 +654,47 @@ fun ConfirmationDialog(
     }
 }
 
+@Composable
+fun ConfirmationDialogForDeleteMessage(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = Color.White.copy(alpha = 0.5f),
+            tonalElevation = 12.dp,
+            shadowElevation = 6.dp,
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Delete all chats?",
+                    style = MaterialTheme.typography.h6,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Button(onClick = onDismiss) {
+                        Text("Cancel")
+                    }
+                    Button(onClick = {
+                        onConfirm()
+                        onDismiss()
+                    }) {
+                        Text("Delete")
+                    }
+                }
+            }
+        }
+    }
+}
 
 @Composable
 fun MainVideoCallUI(callViewModel: CallViewModel) {

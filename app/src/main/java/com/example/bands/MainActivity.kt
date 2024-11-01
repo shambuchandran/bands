@@ -1,10 +1,10 @@
 package com.example.bands
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.compose.setContent
-import androidx.activity.viewModels
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -26,7 +26,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -67,10 +66,12 @@ sealed class DestinationScreen(var route: String) {
     object SingleChat : DestinationScreen("singleChat/{chatId}") {
         fun createRoute(id: String) = "singleChat/$id"
     }
+
     object StatusList : DestinationScreen("statusList")
     object SingleStatus : DestinationScreen("singleStatus/{userId}") {
         fun createRoute(userId: String) = "singleStatus/$userId"
     }
+
     object GemChatPage : DestinationScreen("gemChatPage")
 
     @Serializable
@@ -85,9 +86,8 @@ class MainActivity : FragmentActivity() {
 
         super.onCreate(savedInstanceState)
         setContent {
-           // BandsTheme {
+            // BandsTheme {
             MyAppTheme {
-                // A surface container using the 'background' color from the theme
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -99,14 +99,14 @@ class MainActivity : FragmentActivity() {
         permissions { }
     }
 
+    @SuppressLint("SuspiciousIndentation")
     @Composable
     fun BandsAppNavigation() {
-
         val navController = rememberNavController()
         val viewModel = hiltViewModel<BandsViewModel>()
         val callViewModel = hiltViewModel<CallViewModel>()
-        val gemBotViewModel= hiltViewModel<GemBotViewModel>()
-        val weatherViewModel= hiltViewModel<WeatherViewModel>()
+        val gemBotViewModel = hiltViewModel<GemBotViewModel>()
+        val weatherViewModel = hiltViewModel<WeatherViewModel>()
         val incomingCallState = callViewModel.incomingCallerSession.collectAsState(null)
 
         Box {
@@ -134,19 +134,23 @@ class MainActivity : FragmentActivity() {
                             viewModel,
                             chatId = it,
                             callViewModel = callViewModel,
-                            weatherViewModel=weatherViewModel
+                            weatherViewModel = weatherViewModel
                         )
                     }
 
                 }
                 composable(DestinationScreen.GemChatPage.route) {
-                    GemChatPage(viewModel = gemBotViewModel, navController = navController, context = applicationContext )
+                    GemChatPage(
+                        viewModel = gemBotViewModel,
+                        navController = navController,
+                        context = applicationContext
+                    )
                 }
                 composable(DestinationScreen.Profile.route) {
                     ProfileScreen(navController, viewModel)
                 }
                 composable(DestinationScreen.StatusList.route) {
-                    StatusScreen(navController, viewModel,weatherViewModel)
+                    StatusScreen(navController, viewModel, weatherViewModel)
                 }
                 composable(DestinationScreen.SingleStatus.route) {
                     val userId = it.arguments?.getString("userId")

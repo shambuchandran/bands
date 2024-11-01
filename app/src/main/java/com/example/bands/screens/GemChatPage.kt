@@ -240,7 +240,7 @@ fun AppHeader(navController: NavController, onClearChat: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .height(82.dp)
-            .background(colorResource(id = R.color.chatBgColor)), // Set the height as needed
+            .background(colorResource(id = R.color.chatBgColor)),
         color = colorResource(id = R.color.BgColor),
         shape = RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp),
         shadowElevation = 8.dp,

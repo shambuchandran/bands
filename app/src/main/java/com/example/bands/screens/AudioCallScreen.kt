@@ -15,8 +15,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -39,9 +42,11 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import com.example.bands.R
 import com.example.bands.di.CallViewModel
 import kotlinx.coroutines.delay
+import org.webrtc.SurfaceViewRenderer
 
 //@Composable
 //fun AudioCallScreen(callViewModel: CallViewModel, receiverName: String) {
@@ -204,3 +209,287 @@ import kotlinx.coroutines.delay
 //        }
 //    }
 //}
+//@Composable
+//fun MainVideoCallUI(callViewModel: CallViewModel) {
+//    var isCallVisible by remember { mutableStateOf(true) }
+//    val audioState by remember { mutableStateOf(true) }
+//    val cameraSate by remember { mutableStateOf(true) }
+//
+//    VideoCallScreen(
+//        isVisible = isCallVisible,
+//        callViewModel,
+//        onMicToggle = { callViewModel.audioButtonClicked(audioState) },
+//        onVideoToggle = { callViewModel.videoButtonClicked(cameraSate) },
+//        onEndCall = {
+//            isCallVisible = false
+//            callViewModel.onEndClicked()
+//        },
+//        onSwitchCamera = { callViewModel.cameraSwitchClicked() },
+//        onAudioOutputToggle = { },
+//        audioState,
+//        cameraSate
+//    )
+//}
+//
+//@Composable
+//fun MainAudioCallUI(callViewModel: CallViewModel) {
+//    var isCallVisible by remember { mutableStateOf(true) }
+//    val callerName = "Someone calling"
+//    val audioState by remember { mutableStateOf(true) }
+//
+//    AudioCallScreen(
+//        isVisible = isCallVisible,
+//        callerName = callerName,
+//        onMicToggle = { callViewModel.audioButtonClicked(audioState) },
+//        onEndCall = {
+//            isCallVisible = false
+//            callViewModel.onEndClicked()
+//        },
+//        onAudioOutputToggle = { /* Handle audio output toggle */ },
+//        audioState
+//    )
+//}
+//
+//@Composable
+//fun VideoCallScreen(
+//    isVisible: Boolean,
+//    callViewModel: CallViewModel,
+//    onMicToggle: () -> Unit,
+//    onVideoToggle: () -> Unit,
+//    onEndCall: () -> Unit,
+//    onSwitchCamera: () -> Unit,
+//    onAudioOutputToggle: () -> Unit,
+//    audioState: Boolean,
+//    cameraSate: Boolean
+//) {
+//    if (isVisible) {
+//        Box(
+//            modifier = Modifier
+//                .fillMaxSize()
+//                .background(Color.Black)
+//        ) {
+//            // Remote Video View (Fullscreen)
+//            AndroidView(
+//                factory = { context ->
+//                    SurfaceViewRenderer(context).apply {
+//                        callViewModel.setRemoteSurface(this)
+//                    }
+//                },
+//                modifier = Modifier.fillMaxSize()
+//            )
+//
+//            // Local Video View (Small Preview)
+//            AndroidView(
+//                factory = { context ->
+//                    SurfaceViewRenderer(context).apply {
+//                        // Initialize renderer as needed
+//                        callViewModel.setLocalSurface(this)
+//                    }
+//                },
+//                modifier = Modifier
+//                    .size(width = 120.dp, height = 150.dp)
+//                    .align(Alignment.TopEnd)
+//                    .padding(top = 8.dp, end = 8.dp, bottom = 8.dp)
+//            )
+//
+//            // Loading Indicator (ProgressBar)
+//            CircularProgressIndicator(
+//                modifier = Modifier.align(Alignment.Center)
+//            )
+//
+//            // Controls at the Bottom
+//            Column(
+//                modifier = Modifier
+//                    .align(Alignment.BottomCenter)
+//                    .fillMaxWidth()
+//                    .background(androidx.compose.material.MaterialTheme.colors.onSecondary.copy(alpha = 0.5f))
+//                    .padding(16.dp),
+//                horizontalAlignment = Alignment.CenterHorizontally
+//            ) {
+//                Row(
+//                    horizontalArrangement = Arrangement.SpaceAround,
+//                    verticalAlignment = Alignment.CenterVertically,
+//                    modifier = Modifier.fillMaxWidth()
+//                ) {
+//                    IconButton(
+//                        onClick = onMicToggle,
+//                        modifier = Modifier
+//                            .background(
+//                                color = Color.Black,
+//                                shape = CircleShape
+//                            )
+//                            .padding(12.dp)
+//                    ) {
+//                        Icon(
+//                            painter = if (audioState) painterResource(id = R.drawable.baseline_mic_24) else painterResource(
+//                                id = R.drawable.baseline_mic_off_24
+//                            ),
+//                            contentDescription = "Toggle Audio",
+//                            tint = if (audioState) Color.Black else Color.Red
+//                        )
+//                    }
+//
+//                    IconButton(
+//                        onClick = onVideoToggle,
+//                        modifier = Modifier
+//                            .background(
+//                                color = Color.Black,
+//                                shape = CircleShape
+//                            )
+//                            .padding(12.dp)
+//                    ) {
+//                        Icon(
+//                            painter = if (cameraSate) painterResource(id = R.drawable.baseline_videocam_24) else painterResource(
+//                                id = R.drawable.baseline_videocam_off_24
+//                            ),
+//                            contentDescription = "Toggle Video",
+//                            tint = if (cameraSate) Color.Black else Color.Red
+//                        )
+//                    }
+//
+//                    IconButton(
+//                        onClick = onEndCall,
+//                        modifier = Modifier
+//                            .background(
+//                                color = Color.Red,
+//                                shape = CircleShape
+//                            )
+//                            .padding(12.dp)
+//                    ) {
+//                        Icon(
+//                            painter = painterResource(id = R.drawable.baseline_call_end_24),
+//                            contentDescription = "End Call"
+//                        )
+//                    }
+//
+//                    IconButton(
+//                        onClick = onSwitchCamera,
+//                        modifier = Modifier
+//                            .background(
+//                                color = Color.Black,
+//                                shape = CircleShape
+//                            )
+//                            .padding(12.dp)
+//                    ) {
+//                        Icon(
+//                            painter = painterResource(id = R.drawable.baseline_cameraswitch_24),
+//                            contentDescription = "Switch Camera"
+//                        )
+//                    }
+//
+//                    IconButton(
+//                        onClick = onAudioOutputToggle,
+//                        modifier = Modifier
+//                            .background(
+//                                color = Color.Black,
+//                                shape = CircleShape
+//                            )
+//                            .padding(12.dp)
+//                    ) {
+//                        Icon(
+//                            painter = painterResource(id = R.drawable.baseline_cameraswitch_24),
+//                            contentDescription = "Switch Camera"
+//                        )
+//                    }
+//                }
+//            }
+//        }
+//    }
+//}
+//
+//
+//@Composable
+//fun AudioCallScreen(
+//    isVisible: Boolean,
+//    callerName: String,
+//    onMicToggle: () -> Unit,
+//    onEndCall: () -> Unit,
+//    onAudioOutputToggle: () -> Unit,
+//    audioState: Boolean
+//) {
+//    if (isVisible) {
+//        Box(
+//            modifier = Modifier
+//                .fillMaxSize()
+//                .background(Color.White)
+//        ) {
+//            // Caller Name
+//            Text(
+//                text = callerName,
+//                fontSize = 20.sp,
+//                color = Color.Black,
+//                modifier = Modifier.align(Alignment.Center)
+//            )
+//
+//            // Loading Indicator (ProgressBar)
+//            CircularProgressIndicator(
+//                modifier = Modifier.align(Alignment.Center)
+//            )
+//
+//            // Controls at the Bottom
+//            Column(
+//                modifier = Modifier
+//                    .align(Alignment.BottomCenter)
+//                    .fillMaxWidth()
+//                    .background(androidx.compose.material.MaterialTheme.colors.onSecondary.copy(alpha = 0.5f))
+//                    .padding(16.dp),
+//                horizontalAlignment = Alignment.CenterHorizontally
+//            ) {
+//                Row(
+//                    horizontalArrangement = Arrangement.SpaceAround,
+//                    verticalAlignment = Alignment.CenterVertically,
+//                    modifier = Modifier.fillMaxWidth()
+//                ) {
+//                    IconButton(
+//                        onClick = onMicToggle,
+//                        modifier = Modifier
+//                            .background(
+//                                color = Color.Black,
+//                                shape = CircleShape
+//                            )
+//                            .padding(12.dp)
+//                    ) {
+//                        Icon(
+//                            painter = if (audioState) painterResource(id = R.drawable.baseline_mic_24) else painterResource(
+//                                id = R.drawable.baseline_mic_off_24
+//                            ),
+//                            contentDescription = "Toggle Audio",
+//                            tint = if (audioState) Color.Black else Color.Red
+//                        )
+//                    }
+//
+//                    IconButton(
+//                        onClick = onEndCall,
+//                        modifier = Modifier
+//                            .background(
+//                                color = Color.Red,
+//                                shape = CircleShape
+//                            )
+//                            .padding(12.dp)
+//                    ) {
+//                        Icon(
+//                            painter = painterResource(id = R.drawable.baseline_call_end_24),
+//                            contentDescription = "End Call"
+//                        )
+//                    }
+//
+//                    IconButton(
+//                        onClick = onAudioOutputToggle,
+//                        modifier = Modifier
+//                            .background(
+//                                color = Color.Black,
+//                                shape = CircleShape
+//                            )
+//                            .padding(12.dp)
+//                    ) {
+//                        Icon(
+//                            painter = painterResource(id = R.drawable.baseline_cameraswitch_24),
+//                            contentDescription = "Switch Camera"
+//                        )
+//                    }
+//                }
+//            }
+//        }
+//    }
+//}
+

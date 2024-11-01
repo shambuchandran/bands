@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
@@ -38,9 +39,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.rounded.AddCircle
 import androidx.compose.material.icons.rounded.Call
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -70,7 +69,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
@@ -85,7 +83,6 @@ import com.example.bands.utils.CommonImage
 import com.example.bands.utils.WeatherShowText
 import com.example.bands.utils.navigateTo
 import com.example.bands.weatherupdates.NetworkResponse
-import org.webrtc.SurfaceViewRenderer
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -114,8 +111,6 @@ fun SingleChatScreen(
         if (mainUser?.userId == currentChat.user1.userId) currentChat.user2 else currentChat.user1
     //val chatMessages = viewModel.chatMessages
     val chatMessages by viewModel.chatMessages.collectAsState()
-    val isAudioCallUi = callViewModel.isAudioCall.collectAsState()
-    val isInCall = callViewModel.isInCall.collectAsState()
     val context = LocalContext.current
     val launcher =
         rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri: Uri? ->
@@ -130,8 +125,7 @@ fun SingleChatScreen(
     val showDeleteIcon = remember { mutableStateOf(false) }
     val selectedMessageId = remember { mutableStateOf<String?>(null) }
 
-
-
+    
     LaunchedEffect(key1 = Unit) {
         viewModel.loadMessages(chatId)
         weatherViewModel.fetchWeatherDataFromDatabase(city = chatUser.city ?: "")
@@ -163,60 +157,53 @@ fun SingleChatScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        if (isInCall.value) {
-            if (isAudioCallUi.value) {
-                // Show Audio Call Screen
-                MainAudioCallUI(callViewModel)
-            } else {
-                // Show Video Call Screen
-                MainVideoCallUI(callViewModel)
-            }
-        } else {
-
-            ChatHeader(
-                name = chatUser.name ?: "",
-                imageUrl = chatUser.imageUrl ?: "",
-                chatUserWeatherData,
-                onDeleteChat = {
-                    viewModel.deleteAllMessagesInChat(chatId)
-                },
-                onBacKClicked = {
-                    navController.popBackStack()
-                    viewModel.releaseMessages()
-                },
-                onStartCallButtonClicked = {
-                    chatUser.phoneNumber?.let { callViewModel.startVideoCall(it) }
-
-                },
-                onStartAudioCallButtonClicked = {
-                    chatUser.phoneNumber?.let { callViewModel.startAudioCall(it) }
-                },
-                showDeleteIcon = showDeleteIcon,
-                selectedMessageId = selectedMessageId,
-                onDeleteMessage = {
-                    if (it != null) {
-                        viewModel.deleteMessage(chatId,it)
-                    }
+        ChatHeader(
+            name = chatUser.name ?: "",
+            imageUrl = chatUser.imageUrl ?: "",
+            chatUserWeatherData,
+            onDeleteChat = {
+                viewModel.deleteAllMessagesInChat(chatId)
+            },
+            onBacKClicked = {
+                navController.popBackStack()
+                viewModel.releaseMessages()
+            },
+            onStartCallButtonClicked = {
+                chatUser.let {
+                    navController.navigate(DestinationScreen.CallScreen.createRoute(it.name?:"",it.phoneNumber?:"", "video"))
                 }
-            )
-            MessageBox(
-                modifier = Modifier
-                    .weight(1f)
-                    .background(colorResource(id = R.color.chatBgColor)),
-                chatId,
-                chatMessages = chatMessages,
-                currentUserId = mainUser?.userId ?: "",
-                viewModel,
-                showDeleteIcon,
-                selectedMessageId
-            )
-            ReplyBox(
-                reply = reply,
-                onReplyChange = { reply = it },
-                onSendReply = onSendReply,
-                onSelectImage = onImageSelected
-            )
-        }
+
+            },
+            onStartAudioCallButtonClicked = {
+                chatUser.let {
+                    navController.navigate(DestinationScreen.CallScreen.createRoute(it.name?:"",it.phoneNumber?:"", "audio"))
+                }
+            },
+            showDeleteIcon = showDeleteIcon,
+            selectedMessageId = selectedMessageId,
+            onDeleteMessage = {
+                if (it != null) {
+                    viewModel.deleteMessage(chatId, it)
+                }
+            }
+        )
+        MessageBox(
+            modifier = Modifier
+                .weight(1f)
+                .background(colorResource(id = R.color.chatBgColor)),
+            chatId,
+            chatMessages = chatMessages,
+            currentUserId = mainUser?.userId ?: "",
+            viewModel,
+            showDeleteIcon,
+            selectedMessageId
+        )
+        ReplyBox(
+            reply = reply,
+            onReplyChange = { reply = it },
+            onSendReply = onSendReply,
+            onSelectImage = onImageSelected
+        )
     }
 }
 
@@ -287,7 +274,7 @@ fun MessageBox(
     viewModel: BandsViewModel,
     showDeleteIcon: MutableState<Boolean>,
     selectedMessageId: MutableState<String?>,
-    ) {
+) {
     LazyColumn(
         modifier = modifier,
         reverseLayout = true
@@ -308,11 +295,11 @@ fun MessageBox(
                         detectTapGestures(
                             onTap = {
                                 showEmojiPicker = false
-                                showDeleteIcon.value=false
-                                    },
+                                showDeleteIcon.value = false
+                            },
                             onLongPress = {
                                 showEmojiPicker = !showEmojiPicker
-                                selectedMessageId.value=message.id
+                                selectedMessageId.value = message.id
                                 showDeleteIcon.value = true
                             }
                         )
@@ -503,55 +490,55 @@ fun ChatHeader(
                         data = imageUrl,
                         modifier = Modifier
                             .padding(4.dp)
-                            .size(50.dp)
+                            .size(52.dp)
                             .clip(CircleShape)
                     )
                     Text(
                         text = name,
                         fontWeight = FontWeight.Bold,
+                        fontSize = 24.sp,
                         modifier = Modifier.padding(start = 4.dp)
                     )
                 }
-
-
                 Row(
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        Icons.Rounded.Call,
+                        painter = painterResource(id = R.drawable.baseline_startcall_24),
                         contentDescription = "audioCall",
                         Modifier
                             .clickable { onStartAudioCallButtonClicked.invoke() }
-                            .size(50.dp)
-                            .padding(end = 8.dp)
+                            .size(32.dp)
+
                     )
+                    Spacer(modifier = Modifier.width(20.dp))
                     Icon(
                         painter = painterResource(id = R.drawable.baseline_videocam_24),
                         contentDescription = "videoCall",
                         Modifier
                             .clickable { onStartCallButtonClicked.invoke() }
-                            .size(50.dp)
-                            .padding(end = 8.dp)
+                            .size(32.dp)
+
                     )
+                    Spacer(modifier = Modifier.width(16.dp))
                     if (showDeleteIcon.value) {
                         IconButton(onClick = {
                             showDeleteMessageDialog.value = true
 
                         }) {
-                            Icon(
+                            Icon(modifier = Modifier.size(32.dp),
                                 imageVector = Icons.Default.Delete,
                                 contentDescription = "delete message"
                             )
                         }
                     }
                     IconButton(onClick = { menuExpanded.value = !menuExpanded.value }) {
-                        Icon(
+                        Icon(modifier = Modifier.size(32.dp),
                             imageVector = Icons.Default.MoreVert,
                             contentDescription = "clear Chat"
                         )
                     }
-
                     DropdownMenu(
                         expanded = menuExpanded.value,
                         onDismissRequest = { menuExpanded.value = false }) {
@@ -575,16 +562,16 @@ fun ChatHeader(
                     onDismiss = { showDialog.value = false }
                 )
             }
-            if (showDeleteMessageDialog.value){
+            if (showDeleteMessageDialog.value) {
                 ConfirmationDialogForDeleteMessage(
                     onConfirm = {
                         onDeleteMessage(selectedMessageId.value)
-                        showDeleteMessageDialog.value=false
-                        showDeleteIcon.value=false
+                        showDeleteMessageDialog.value = false
+                        showDeleteIcon.value = false
                     },
                     onDismiss = {
-                        showDeleteIcon.value=false
-                        showDeleteMessageDialog.value=false
+                        showDeleteIcon.value = false
+                        showDeleteMessageDialog.value = false
                     }
                 )
 
@@ -696,289 +683,6 @@ fun ConfirmationDialogForDeleteMessage(
     }
 }
 
-@Composable
-fun MainVideoCallUI(callViewModel: CallViewModel) {
-    var isCallVisible by remember { mutableStateOf(true) }
-    val audioState by remember { mutableStateOf(true) }
-    val cameraSate by remember { mutableStateOf(true) }
-
-    VideoCallScreen(
-        isVisible = isCallVisible,
-        callViewModel,
-        onMicToggle = { callViewModel.audioButtonClicked(audioState) },
-        onVideoToggle = { callViewModel.videoButtonClicked(cameraSate) },
-        onEndCall = {
-            isCallVisible = false
-            callViewModel.onEndClicked()
-        },
-        onSwitchCamera = { callViewModel.cameraSwitchClicked() },
-        onAudioOutputToggle = { },
-        audioState,
-        cameraSate
-    )
-}
-
-@Composable
-fun MainAudioCallUI(callViewModel: CallViewModel) {
-    var isCallVisible by remember { mutableStateOf(true) }
-    val callerName = "Someone calling"
-    val audioState by remember { mutableStateOf(true) }
-
-    AudioCallScreen(
-        isVisible = isCallVisible,
-        callerName = callerName,
-        onMicToggle = { callViewModel.audioButtonClicked(audioState) },
-        onEndCall = {
-            isCallVisible = false
-            callViewModel.onEndClicked()
-        },
-        onAudioOutputToggle = { /* Handle audio output toggle */ },
-        audioState
-    )
-}
-
-@Composable
-fun VideoCallScreen(
-    isVisible: Boolean,
-    callViewModel: CallViewModel,
-    onMicToggle: () -> Unit,
-    onVideoToggle: () -> Unit,
-    onEndCall: () -> Unit,
-    onSwitchCamera: () -> Unit,
-    onAudioOutputToggle: () -> Unit,
-    audioState: Boolean,
-    cameraSate: Boolean
-) {
-    if (isVisible) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black)
-        ) {
-            // Remote Video View (Fullscreen)
-            AndroidView(
-                factory = { context ->
-                    SurfaceViewRenderer(context).apply {
-                        callViewModel.setRemoteSurface(this)
-                    }
-                },
-                modifier = Modifier.fillMaxSize()
-            )
-
-            // Local Video View (Small Preview)
-            AndroidView(
-                factory = { context ->
-                    SurfaceViewRenderer(context).apply {
-                        // Initialize renderer as needed
-                        callViewModel.setLocalSurface(this)
-                    }
-                },
-                modifier = Modifier
-                    .size(width = 120.dp, height = 150.dp)
-                    .align(Alignment.TopEnd)
-                    .padding(top = 8.dp, end = 8.dp, bottom = 8.dp)
-            )
-
-            // Loading Indicator (ProgressBar)
-            CircularProgressIndicator(
-                modifier = Modifier.align(Alignment.Center)
-            )
-
-            // Controls at the Bottom
-            Column(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colors.onSecondary.copy(alpha = 0.5f))
-                    .padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.SpaceAround,
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    IconButton(
-                        onClick = onMicToggle,
-                        modifier = Modifier
-                            .background(
-                                color = Color.Black,
-                                shape = CircleShape
-                            )
-                            .padding(12.dp)
-                    ) {
-                        Icon(
-                            painter = if (audioState) painterResource(id = R.drawable.baseline_mic_24) else painterResource(
-                                id = R.drawable.baseline_mic_off_24
-                            ),
-                            contentDescription = "Toggle Audio",
-                            tint = if (audioState) Color.Black else Color.Red
-                        )
-                    }
-
-                    IconButton(
-                        onClick = onVideoToggle,
-                        modifier = Modifier
-                            .background(
-                                color = Color.Black,
-                                shape = CircleShape
-                            )
-                            .padding(12.dp)
-                    ) {
-                        Icon(
-                            painter = if (cameraSate) painterResource(id = R.drawable.baseline_videocam_24) else painterResource(
-                                id = R.drawable.baseline_videocam_off_24
-                            ),
-                            contentDescription = "Toggle Video",
-                            tint = if (cameraSate) Color.Black else Color.Red
-                        )
-                    }
-
-                    IconButton(
-                        onClick = onEndCall,
-                        modifier = Modifier
-                            .background(
-                                color = Color.Red,
-                                shape = CircleShape
-                            )
-                            .padding(12.dp)
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.baseline_call_end_24),
-                            contentDescription = "End Call"
-                        )
-                    }
-
-                    IconButton(
-                        onClick = onSwitchCamera,
-                        modifier = Modifier
-                            .background(
-                                color = Color.Black,
-                                shape = CircleShape
-                            )
-                            .padding(12.dp)
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.baseline_cameraswitch_24),
-                            contentDescription = "Switch Camera"
-                        )
-                    }
-
-                    IconButton(
-                        onClick = onAudioOutputToggle,
-                        modifier = Modifier
-                            .background(
-                                color = Color.Black,
-                                shape = CircleShape
-                            )
-                            .padding(12.dp)
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.baseline_cameraswitch_24),
-                            contentDescription = "Switch Camera"
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-
-@Composable
-fun AudioCallScreen(
-    isVisible: Boolean,
-    callerName: String,
-    onMicToggle: () -> Unit,
-    onEndCall: () -> Unit,
-    onAudioOutputToggle: () -> Unit,
-    audioState: Boolean
-) {
-    if (isVisible) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.White)
-        ) {
-            // Caller Name
-            Text(
-                text = callerName,
-                fontSize = 20.sp,
-                color = Color.Black,
-                modifier = Modifier.align(Alignment.Center)
-            )
-
-            // Loading Indicator (ProgressBar)
-            CircularProgressIndicator(
-                modifier = Modifier.align(Alignment.Center)
-            )
-
-            // Controls at the Bottom
-            Column(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colors.onSecondary.copy(alpha = 0.5f))
-                    .padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.SpaceAround,
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    IconButton(
-                        onClick = onMicToggle,
-                        modifier = Modifier
-                            .background(
-                                color = Color.Black,
-                                shape = CircleShape
-                            )
-                            .padding(12.dp)
-                    ) {
-                        Icon(
-                            painter = if (audioState) painterResource(id = R.drawable.baseline_mic_24) else painterResource(
-                                id = R.drawable.baseline_mic_off_24
-                            ),
-                            contentDescription = "Toggle Audio",
-                            tint = if (audioState) Color.Black else Color.Red
-                        )
-                    }
-
-                    IconButton(
-                        onClick = onEndCall,
-                        modifier = Modifier
-                            .background(
-                                color = Color.Red,
-                                shape = CircleShape
-                            )
-                            .padding(12.dp)
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.baseline_call_end_24),
-                            contentDescription = "End Call"
-                        )
-                    }
-
-                    IconButton(
-                        onClick = onAudioOutputToggle,
-                        modifier = Modifier
-                            .background(
-                                color = Color.Black,
-                                shape = CircleShape
-                            )
-                            .padding(12.dp)
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.baseline_cameraswitch_24),
-                            contentDescription = "Switch Camera"
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
 
 
 

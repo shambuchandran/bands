@@ -49,6 +49,10 @@ data class MessageModel(
     val data: Any? = null,
     val callMode: Boolean,
 )
+data class IncomingCallData(
+    val name: String?,
+    val phoneNumber: String,
+    val callType: String)
 
 data class IceCandidateModel(
     val sdpMid: String,

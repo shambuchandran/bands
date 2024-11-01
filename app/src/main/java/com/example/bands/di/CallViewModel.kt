@@ -6,6 +6,7 @@ import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.bands.data.IceCandidateModel
+import com.example.bands.data.IncomingCallData
 import com.example.bands.data.MessageModel
 import com.example.bands.utils.NewMessageInterface
 import com.example.bands.webrtc.PeerConnectionObserver
@@ -39,11 +40,18 @@ class CallViewModel @Inject constructor(
     private var targetName: String = ""
     private val gson = Gson()
     val incomingCallerSession: MutableStateFlow<MessageModel?> = MutableStateFlow(null)
+    private val _updateIncomingCallerSession = MutableStateFlow<IncomingCallData?>(null)
+    val updateIncomingCallerSession: StateFlow<IncomingCallData?> = _updateIncomingCallerSession
     private val _isInCall = MutableStateFlow(false)
     val isInCall: StateFlow<Boolean> = _isInCall.asStateFlow()
     private val _isAudioCall = MutableStateFlow(false)
     val isAudioCall: StateFlow<Boolean> = _isAudioCall.asStateFlow()
 
+
+//    fun updateIncomingCaller(name:String, phoneNumber: String, callType: String) {
+//        if ()
+//        _updateIncomingCallerSession.value = IncomingCallData(name, phoneNumber, callType)
+//    }
 
     fun init(username: String) {
         userName = username

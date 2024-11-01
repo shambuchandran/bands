@@ -41,6 +41,7 @@ import com.example.bands.di.BandsViewModel
 import com.example.bands.di.CallViewModel
 import com.example.bands.di.GemBotViewModel
 import com.example.bands.di.WeatherViewModel
+import com.example.bands.screens.CallScreen
 import com.example.bands.screens.ChatListScreen
 import com.example.bands.screens.GemChatPage
 import com.example.bands.screens.LoginScreen
@@ -66,22 +67,21 @@ sealed class DestinationScreen(var route: String) {
     object SingleChat : DestinationScreen("singleChat/{chatId}") {
         fun createRoute(id: String) = "singleChat/$id"
     }
-
     object StatusList : DestinationScreen("statusList")
     object SingleStatus : DestinationScreen("singleStatus/{userId}") {
         fun createRoute(userId: String) = "singleStatus/$userId"
     }
-
     object GemChatPage : DestinationScreen("gemChatPage")
-
     @Serializable
     data class NewsArticleScreenRoute(val url: String)
+    object CallScreen : DestinationScreen("call/{name}/{phoneNumber}/{callType}") {
+        fun createRoute( name:String,phoneNumber: String, callType: String) = "call/$name/$phoneNumber/$callType"
+    }
 
 }
 
 @AndroidEntryPoint
 class MainActivity : FragmentActivity() {
-
     override fun onCreate(savedInstanceState: Bundle?) {
 
         super.onCreate(savedInstanceState)
@@ -107,7 +107,7 @@ class MainActivity : FragmentActivity() {
         val callViewModel = hiltViewModel<CallViewModel>()
         val gemBotViewModel = hiltViewModel<GemBotViewModel>()
         val weatherViewModel = hiltViewModel<WeatherViewModel>()
-        val incomingCallState = callViewModel.incomingCallerSession.collectAsState(null)
+        val incomingCallState = callViewModel.updateIncomingCallerSession.collectAsState(null)
 
         Box {
             NavHost(
@@ -162,23 +162,24 @@ class MainActivity : FragmentActivity() {
                     val argument = it.toRoute<DestinationScreen.NewsArticleScreenRoute>()
                     NewsArticleScreen(argument.url)
                 }
+                composable(DestinationScreen.CallScreen.route) { backStackEntry ->
+                    val name=backStackEntry.arguments?.getString("name")
+                    val phoneNumber = backStackEntry.arguments?.getString("phoneNumber")
+                    val callType = backStackEntry.arguments?.getString("callType")
+                    CallScreen(name,phoneNumber, callType)
+                }
 
             }
             Log.d("IncomingCallComponent", incomingCallState.toString())
             if (incomingCallState.value != null) {
                 IncomingCallComponent(
                     incomingCallerName = incomingCallState.value?.name,
-                    onAcceptPressed = { incomingCallerName ->
-                        callViewModel.acceptCall()
-                        val findChat = viewModel.chats.value.find {
-                            it.user1.phoneNumber == incomingCallerName || it.user2.phoneNumber == incomingCallerName
-                        }
-                        findChat?.let {
-                            navigateTo(
-                                navController,
-                                DestinationScreen.SingleChat.createRoute(it.chatId ?: "")
-                            )
-                        }
+                    incomingCallerNumber = incomingCallState.value?.phoneNumber,
+                    onAcceptPressed = {
+                        //callViewModel.acceptCall()
+                        navController.navigate(
+                            DestinationScreen.CallScreen.createRoute(incomingCallState.value?.name ?:"",incomingCallState.value?.phoneNumber ?: "", incomingCallState.value?.callType ?: "")
+                        )
                     },
                     onRejectPressed = callViewModel::rejectCall
                 )
@@ -213,7 +214,8 @@ class MainActivity : FragmentActivity() {
     @Composable
     fun IncomingCallComponent(
         incomingCallerName: String?,
-        onAcceptPressed: (String) -> Unit,
+        incomingCallerNumber: String?,
+        onAcceptPressed: () -> Unit,
         onRejectPressed: () -> Unit
     ) {
         if (incomingCallerName != null) {
@@ -228,7 +230,7 @@ class MainActivity : FragmentActivity() {
                 horizontalArrangement = Arrangement.Center
             ) {
                 Text(
-                    text = "$incomingCallerName is calling",
+                    text = if (incomingCallerName == null)"$incomingCallerNumber" else "$incomingCallerName +is calling",
                     modifier = Modifier
                         .weight(8f)
                         .wrapContentWidth(Alignment.CenterHorizontally),
@@ -244,8 +246,9 @@ class MainActivity : FragmentActivity() {
                         .weight(2f)
                         .padding(end = 8.dp)
                         .clickable {
-
-                            onAcceptPressed.invoke(incomingCallerName)
+                            if (incomingCallerNumber != null) {
+                                onAcceptPressed.invoke()
+                            }
                         }
                 )
 

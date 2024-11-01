@@ -37,23 +37,28 @@ class WeatherViewModel @Inject constructor(
 
     private fun getCityFromIpAndFetchWeather() {
         viewModelScope.launch {
+            Log.d("WeatherApp", "Starting getCityFromIpAndFetchWeather function")
             try {
                 val geoResponse = geolocationApi.getLocationData()
+                Log.d("WeatherApp", "Received geolocation API response: ${geoResponse.code()} - ${geoResponse.message()}")
                 if (geoResponse.isSuccessful) {
                     geoResponse.body()?.let { location ->
+                        Log.d("WeatherApp", "Retrieved city name from geolocation API: ${location.city}")
                         val cityName = location.city
                         getData(cityName)
-                        updateUserCity(cityName)
                     } ?: run {
                         _weatherResult.value =
                             NetworkResponse.Error("Failed to load: Empty response")
+                        Log.e("WeatherApp", "Error: Empty response from geolocation API")
                     }
                 } else {
                     _weatherResult.value =
                         NetworkResponse.Error("Failed to get location${geoResponse.message()}")
+                    Log.e("WeatherApp", "Failed to get location data. Response code: ${geoResponse.code()}, Message: ${geoResponse.message()}")
                 }
             } catch (e: Exception) {
                 _weatherResult.value = NetworkResponse.Error("Failed to get location")
+                Log.e("WeatherApp", "Exception occurred while fetching location", e)
                 e.printStackTrace()
             }
         }
@@ -95,25 +100,58 @@ class WeatherViewModel @Inject constructor(
             Log.d("WeatherViewModel", "Error fetching chats: ${exception.message}")
         }
     }
+    private fun handleCityFetchFailure() {
+        fetchLastSavedCity { lastSavedCity ->
+            if (lastSavedCity != null) {
+                Log.d("WeatherApp", "Using last saved city: $lastSavedCity")
+                getData(lastSavedCity)
+                Log.e("WeatherApp", "No saved city available.")
+            }
+        }
+    }
+    private fun fetchLastSavedCity(onResult: (String?) -> Unit) {
+        val uid = auth.currentUser?.uid ?: run {
+            onResult(null)
+            return
+        }
+        db.collection("user").document(uid).get()
+            .addOnSuccessListener { document ->
+                val lastSavedCity = document.getString("city")
+                onResult(lastSavedCity)
+            }
+            .addOnFailureListener { exception ->
+                Log.e("WeatherViewModel", "Error fetching last saved city: ${exception.message}")
+                onResult(null)
+            }
+    }
 
     private fun getData(city: String) {
+        Log.d("WeatherApp", "getData() called with city: $city")
         _weatherResult.value = NetworkResponse.Loading
         viewModelScope.launch {
             try {
                 val response = weatherApiInterface.getWeather(Constant.apikey, city)
+                Log.d("WeatherApp", "Weather API response received: ${response.code()} - ${response.message()}")
                 if (response.isSuccessful) {
                     response.body()?.let {
                         _weatherResult.value = NetworkResponse.Success(it)
+                        updateUserCity(city)
+                        Log.d("WeatherApp", "Successfully retrieved weather data: $it")
                     } ?: run {
-                        _weatherResult.value =
-                            NetworkResponse.Error("Failed to load: Empty weather data")
+                        _weatherResult.value = NetworkResponse.Error("Failed to load: Empty weather data")
+                        Log.e("WeatherApp", "Failed to load: Empty weather data")
+                        handleCityFetchFailure()
                     }
                 } else {
                     _weatherResult.value =
                         NetworkResponse.Error("Failed to load weather: ${response.message()}")
+                    Log.e("WeatherApp", "Failed to load weather: ${response.message()}")
+                    handleCityFetchFailure()
                 }
             } catch (e: Exception) {
                 _weatherResult.value = NetworkResponse.Error("Failed to load weather: ${e.message}")
+                handleCityFetchFailure()
+                Log.e("WeatherApp", "Exception occurred while loading weather data: ${e.message}", e)
                 e.printStackTrace()
             }
         }
@@ -124,19 +162,24 @@ class WeatherViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val response = weatherApiInterface.getWeather(Constant.apikey, city)
+                Log.d("WeatherApp", "Weather API response received for chat user: ${response.code()} - ${response.message()}")
                 if (response.isSuccessful) {
                     response.body()?.let {
                         _chatUserCityName.value = NetworkResponse.Success(it)
+                        Log.d("WeatherApp", "Successfully retrieved weather data for chat user: $it")
                     } ?: run {
                         _chatUserCityName.value =
                             NetworkResponse.Error("Failed to load: Empty weather data")
+                        Log.e("WeatherApp", "Failed to load weather data: Empty weather data for chat user")
                     }
                 } else {
                     _chatUserCityName.value =
                         NetworkResponse.Error("Failed to load weather: ${response.message()}")
+                    Log.e("WeatherApp", "Failed to load weather data for chat user: ${response.message()}")
                 }
             } catch (e: Exception) {
                 _chatUserCityName.value = NetworkResponse.Error("Failed to load weather: ${e.message}")
+                Log.e("WeatherApp", "Exception occurred while loading weather data for chat user: ${e.message}", e)
                 e.printStackTrace()
             }
         }

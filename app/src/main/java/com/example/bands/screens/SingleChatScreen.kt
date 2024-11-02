@@ -38,7 +38,6 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.rounded.AddCircle
-import androidx.compose.material.icons.rounded.Call
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Icon
@@ -83,6 +82,8 @@ import com.example.bands.utils.CommonImage
 import com.example.bands.utils.WeatherShowText
 import com.example.bands.utils.navigateTo
 import com.example.bands.weatherupdates.NetworkResponse
+import kotlinx.coroutines.delay
+import org.webrtc.SurfaceViewRenderer
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -124,6 +125,7 @@ fun SingleChatScreen(
     }
     val showDeleteIcon = remember { mutableStateOf(false) }
     val selectedMessageId = remember { mutableStateOf<String?>(null) }
+
 
     
     LaunchedEffect(key1 = Unit) {
@@ -168,15 +170,15 @@ fun SingleChatScreen(
                 navController.popBackStack()
                 viewModel.releaseMessages()
             },
-            onStartCallButtonClicked = {
+            onStartVideoCallButtonClicked = {
                 chatUser.let {
-                    navController.navigate(DestinationScreen.CallScreen.createRoute(it.name?:"",it.phoneNumber?:"", "video"))
+                    navController.navigate(DestinationScreen.CallScreen.createRoute(it.name?:"",it.phoneNumber?:""))
+                    //it.phoneNumber?.let { it1 -> callViewModel.startCall(it1) }
                 }
-
             },
             onStartAudioCallButtonClicked = {
                 chatUser.let {
-                    navController.navigate(DestinationScreen.CallScreen.createRoute(it.name?:"",it.phoneNumber?:"", "audio"))
+                    navController.navigate(DestinationScreen.CallScreen.createRoute(it.name?:"",it.phoneNumber?:""))
                 }
             },
             showDeleteIcon = showDeleteIcon,
@@ -443,7 +445,7 @@ fun ChatHeader(
     data: WeatherModel? = null,
     onDeleteChat: () -> Unit,
     onBacKClicked: () -> Unit,
-    onStartCallButtonClicked: () -> Unit,
+    onStartVideoCallButtonClicked: () -> Unit,
     onStartAudioCallButtonClicked: () -> Unit,
     showDeleteIcon: MutableState<Boolean>,
     selectedMessageId: MutableState<String?>,
@@ -517,7 +519,7 @@ fun ChatHeader(
                         painter = painterResource(id = R.drawable.baseline_videocam_24),
                         contentDescription = "videoCall",
                         Modifier
-                            .clickable { onStartCallButtonClicked.invoke() }
+                            .clickable { onStartVideoCallButtonClicked.invoke() }
                             .size(32.dp)
 
                     )

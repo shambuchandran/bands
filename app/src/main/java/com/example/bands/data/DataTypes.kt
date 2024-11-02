@@ -47,7 +47,6 @@ data class MessageModel(
     val name: String? = null,
     val target: String? = null,
     val data: Any? = null,
-    val callMode: Boolean,
 )
 data class IncomingCallData(
     val name: String?,
@@ -66,7 +65,9 @@ data class GemMessageModel(
     val timeStamp: Long
 )
 
-
+interface NewMessageInterface {
+    fun onNewMessage(message: MessageModel)
+}
 
 
 

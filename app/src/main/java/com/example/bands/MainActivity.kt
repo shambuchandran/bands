@@ -4,6 +4,7 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -53,7 +54,6 @@ import com.example.bands.screens.SingleChatScreen
 import com.example.bands.screens.SingleStatusScreen
 import com.example.bands.screens.StatusScreen
 import com.example.bands.utils.MyAppTheme
-import com.example.bands.utils.navigateTo
 import com.permissionx.guolindev.PermissionX
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.serialization.Serializable
@@ -74,8 +74,8 @@ sealed class DestinationScreen(var route: String) {
     object GemChatPage : DestinationScreen("gemChatPage")
     @Serializable
     data class NewsArticleScreenRoute(val url: String)
-    object CallScreen : DestinationScreen("call/{name}/{phoneNumber}/{callType}") {
-        fun createRoute( name:String,phoneNumber: String, callType: String) = "call/$name/$phoneNumber/$callType"
+    object CallScreen : DestinationScreen("call/{name}/{phoneNumber}") {
+        fun createRoute( name:String,phoneNumber: String) = "call/$name/$phoneNumber"
     }
 
 }
@@ -107,7 +107,7 @@ class MainActivity : FragmentActivity() {
         val callViewModel = hiltViewModel<CallViewModel>()
         val gemBotViewModel = hiltViewModel<GemBotViewModel>()
         val weatherViewModel = hiltViewModel<WeatherViewModel>()
-        val incomingCallState = callViewModel.updateIncomingCallerSession.collectAsState(null)
+        val incomingCallState = callViewModel.incomingCallerSession.collectAsState(null)
 
         Box {
             NavHost(
@@ -166,7 +166,11 @@ class MainActivity : FragmentActivity() {
                     val name=backStackEntry.arguments?.getString("name")
                     val phoneNumber = backStackEntry.arguments?.getString("phoneNumber")
                     val callType = backStackEntry.arguments?.getString("callType")
-                    CallScreen(name,phoneNumber, callType)
+                    if (phoneNumber != null) {
+                            if (name != null) {
+                                CallScreen(name,phoneNumber,callType,callViewModel,navController)
+                            }
+                    }
                 }
 
             }
@@ -174,12 +178,19 @@ class MainActivity : FragmentActivity() {
             if (incomingCallState.value != null) {
                 IncomingCallComponent(
                     incomingCallerName = incomingCallState.value?.name,
-                    incomingCallerNumber = incomingCallState.value?.phoneNumber,
+                    incomingCallerNumber = incomingCallState.value?.name,
                     onAcceptPressed = {
-                        //callViewModel.acceptCall()
+//                        if (incomingCallState.value?.callMode == "video"){
+//                            callViewModel.acceptCall()
+//                            Toast.makeText(applicationContext,"video call",Toast.LENGTH_SHORT).show()
+//                        }else{
+//                            Toast.makeText(applicationContext,"audio call",Toast.LENGTH_SHORT).show()
+//                        }
+
                         navController.navigate(
-                            DestinationScreen.CallScreen.createRoute(incomingCallState.value?.name ?:"",incomingCallState.value?.phoneNumber ?: "", incomingCallState.value?.callType ?: "")
+                            DestinationScreen.CallScreen.createRoute(incomingCallState.value?.name ?:"",incomingCallState.value?.name ?: "" )
                         )
+                        callViewModel.acceptCall()
                     },
                     onRejectPressed = callViewModel::rejectCall
                 )

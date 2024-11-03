@@ -129,6 +129,9 @@ fun SingleChatScreen(
 
     
     LaunchedEffect(key1 = Unit) {
+        mainUser?.phoneNumber?.let {
+            callViewModel.init(it)
+        }
         viewModel.loadMessages(chatId)
         weatherViewModel.fetchWeatherDataFromDatabase(city = chatUser.city ?: "")
     }

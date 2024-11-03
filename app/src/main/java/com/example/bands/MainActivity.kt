@@ -108,7 +108,7 @@ class MainActivity : FragmentActivity() {
         val gemBotViewModel = hiltViewModel<GemBotViewModel>()
         val weatherViewModel = hiltViewModel<WeatherViewModel>()
         val incomingCallState = callViewModel.incomingCallerSession.collectAsState(null)
-
+        val isInCall =callViewModel.isInCall.collectAsState(false)
         Box {
             NavHost(
                 navController = navController,
@@ -165,17 +165,16 @@ class MainActivity : FragmentActivity() {
                 composable(DestinationScreen.CallScreen.route) { backStackEntry ->
                     val name=backStackEntry.arguments?.getString("name")
                     val phoneNumber = backStackEntry.arguments?.getString("phoneNumber")
-                    val callType = backStackEntry.arguments?.getString("callType")
                     if (phoneNumber != null) {
                             if (name != null) {
-                                CallScreen(name,phoneNumber,callType,callViewModel,navController)
+                                CallScreen(name,phoneNumber,callViewModel,navController)
                             }
                     }
                 }
 
             }
-            Log.d("IncomingCallComponent", incomingCallState.toString())
-            if (incomingCallState.value != null) {
+            Log.d("RTCC icc", " icc ${incomingCallState.value.toString()}")
+            if (incomingCallState.value != null && !isInCall.value) {
                 IncomingCallComponent(
                     incomingCallerName = incomingCallState.value?.name,
                     incomingCallerNumber = incomingCallState.value?.name,
@@ -190,7 +189,8 @@ class MainActivity : FragmentActivity() {
                         navController.navigate(
                             DestinationScreen.CallScreen.createRoute(incomingCallState.value?.name ?:"",incomingCallState.value?.name ?: "" )
                         )
-                        callViewModel.acceptCall()
+                        //callViewModel.acceptCall()
+                        callViewModel.setCallAcceptedPending(true)
                     },
                     onRejectPressed = callViewModel::rejectCall
                 )

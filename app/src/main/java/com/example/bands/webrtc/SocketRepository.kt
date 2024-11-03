@@ -22,7 +22,7 @@ class SocketRepository @Inject constructor() {
     fun initSocket(username:String,messageInterface: NewMessageInterface){
         userName=username
         // this line will change any time so check and update before run "ws://192.168.1.4:3000"
-        webSocket = object :WebSocketClient(URI("ws://192.168.1.6:3000")){
+        webSocket = object :WebSocketClient(URI("ws://192.168.1.5:3000")){
             override fun onOpen(handshakedata: ServerHandshake?) {
                 sendMessageToSocket(MessageModel(
                     "store_user",userName,null,null

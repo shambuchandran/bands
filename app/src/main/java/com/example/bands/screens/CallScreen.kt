@@ -1,7 +1,9 @@
 package com.example.bands.screens
 
+import android.annotation.SuppressLint
 import android.transition.Visibility
 import android.widget.FrameLayout
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -49,36 +51,52 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
+import com.example.bands.DestinationScreen
 import com.example.bands.R
 import com.example.bands.di.CallViewModel
+import com.example.bands.utils.navigateTo
 import kotlinx.coroutines.delay
 import org.webrtc.SurfaceViewRenderer
 
+@SuppressLint("SuspiciousIndentation")
 @Composable
-fun CallScreen(name:String,phoneNumber: String?, callType: String?,callViewModel: CallViewModel,navController: NavController) {
+fun CallScreen(name:String,phoneNumber: String?,callViewModel: CallViewModel,navController: NavController) {
     val context = LocalContext.current
     val localSurfaceViewRenderer = remember { SurfaceViewRenderer(context)}
     val remoteSurfaceViewRenderer = remember { SurfaceViewRenderer(context)}
+    val isCallAcceptedPending by callViewModel.isCallAcceptedPending.collectAsState()
+
         LaunchedEffect(Unit) {
+            callViewModel.setRemoteSurface(remoteSurfaceViewRenderer)
         callViewModel.rtcClient?.let { rtcClient ->
             rtcClient.initSurfaceView(localSurfaceViewRenderer)
             rtcClient.initSurfaceView(remoteSurfaceViewRenderer)
             rtcClient.startLocalVideo(localSurfaceViewRenderer)
-            callViewModel.setRemoteSurface(remoteSurfaceViewRenderer)
         }
-            delay(2000)
+            delay(500)
             if (phoneNumber != null) {
                 callViewModel.startCall(phoneNumber)
             }
-            delay(2000)
-            callViewModel.acceptCall(phoneNumber)
+            if (isCallAcceptedPending) {
+                callViewModel.acceptCallIfPending()
+            }
+
+
     }
     DisposableEffect(Unit) {
         onDispose {
-            callViewModel.rtcClient?.endCall()
+            callViewModel.onEndClicked()
+            callViewModel.rtcClient = null
             localSurfaceViewRenderer.release()
             remoteSurfaceViewRenderer.release()
         }
+    }
+    BackHandler {
+        if (callViewModel.isInCall.value) {
+            callViewModel.onEndClicked()
+            callViewModel.rtcClient = null
+        }
+        navController.popBackStack()
     }
     MainVideoCallUI(callViewModel,navController,localSurfaceViewRenderer,remoteSurfaceViewRenderer)
 //    if (callType == "video") {
@@ -280,7 +298,6 @@ fun VideoCallScreen(
     localViewRenderer: SurfaceViewRenderer,
     remoteViewRenderer: SurfaceViewRenderer
 ) {
-    val isRemoteVideoAvailable by callViewModel.isRemoteVideoAvailable.collectAsState()
 
     Box(
         modifier = Modifier
@@ -304,12 +321,6 @@ fun VideoCallScreen(
                         }
                     }
                 )
-
-                if (!isRemoteVideoAvailable) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                }
             }
             Box(
                 modifier = Modifier
@@ -327,8 +338,6 @@ fun VideoCallScreen(
                 )
             }
         }
-
-        // Control Buttons Layout
         ControlButtonsLayout(
             modifier = Modifier
                 .align(Alignment.BottomCenter)

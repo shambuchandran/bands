@@ -35,35 +35,35 @@ class CallViewModel @Inject constructor(
     private val socketRepository: SocketRepository
 ) : ViewModel(), NewMessageInterface {
 
+    private var isInitialized = false
     private var localSurfaceViewRenderer: SurfaceViewRenderer? = null
     private var remoteSurfaceViewRenderer: SurfaceViewRenderer? = null
 
     fun setLocalSurface(view: SurfaceViewRenderer) {
         this.localSurfaceViewRenderer = view
     }
-
     fun setRemoteSurface(view: SurfaceViewRenderer) {
         this.remoteSurfaceViewRenderer = view
     }
-
 
     var rtcClient: RTCClient? = null
     private var userName: String? = ""
     private var target: String = ""
     private val gson = Gson()
     val incomingCallerSession: MutableStateFlow<MessageModel?> = MutableStateFlow(null)
-
     private val _isInCall = MutableStateFlow(false)
     val isInCall: StateFlow<Boolean> = _isInCall.asStateFlow()
     private val _isAudioCall = MutableStateFlow(false)
     val isAudioCall: StateFlow<Boolean> = _isAudioCall.asStateFlow()
 
+    private val _isCallAcceptedPending = MutableStateFlow(false)
+    val isCallAcceptedPending: StateFlow<Boolean> get() = _isCallAcceptedPending
 
-    private val _isRemoteVideoAvailable = MutableStateFlow(false)
-    val isRemoteVideoAvailable: StateFlow<Boolean> get() = _isRemoteVideoAvailable
 
 
     fun init(username: String) {
+        if (isInitialized && this.userName == username) return
+        isInitialized = true
         userName = username
         socketRepository.initSocket(username, this)
         rtcClient =
@@ -116,24 +116,41 @@ class CallViewModel @Inject constructor(
             })
     }
 
+    fun setCallAcceptedPending(isPending: Boolean) {
+        _isCallAcceptedPending.value = isPending
+    }
+
+    fun acceptCallIfPending() {
+        if (_isCallAcceptedPending.value) {
+            acceptCall()
+            _isCallAcceptedPending.value = false
+        }
+    }
 
     fun startCall(target: String) {
         this.target = target
         Log.d("RTCC","startCall $target")
+        if (rtcClient == null) {
+           init(userName!!)
+        }
         socketRepository.sendMessageToSocket(
             MessageModel(
                 "start_call", userName, target, null
             )
         )
+        _isInCall.value=true
     }
-
     fun acceptCall() {
+        _isInCall.value=true
+        if (rtcClient == null) {
+            init(userName!!)
+        }
         val session = SessionDescription(
             SessionDescription.Type.OFFER,
             incomingCallerSession.value?.data.toString()
         )
         Log.d("RTCC","acceptCall $session , ${incomingCallerSession.value?.name}")
-        //target = incomingCallerSession.value?.name!!
+        target = incomingCallerSession.value?.name!!
         rtcClient?.onRemoteSessionReceived(session)
         rtcClient?.answer(incomingCallerSession.value?.name!!)
         viewModelScope.launch {
@@ -142,6 +159,7 @@ class CallViewModel @Inject constructor(
     }
 
     fun rejectCall() {
+        _isInCall.value=false
         viewModelScope.launch {
             incomingCallerSession.emit(null)
         }
@@ -161,6 +179,8 @@ class CallViewModel @Inject constructor(
     }
 
     override fun onCleared() {
+        isInitialized = false
+        _isInCall.value = false
         localSurfaceViewRenderer?.release()
         localSurfaceViewRenderer?.clearImage()
         localSurfaceViewRenderer = null
@@ -168,11 +188,14 @@ class CallViewModel @Inject constructor(
         remoteSurfaceViewRenderer?.clearImage()
         remoteSurfaceViewRenderer = null
         super.onCleared()
+        rtcClient=null
     }
 
     fun onEndClicked() {
         rtcClient?.endCall()
+        rtcClient=null
         _isInCall.value = false
+        isInitialized = false
         localSurfaceViewRenderer?.release()
         localSurfaceViewRenderer?.clearImage()
         localSurfaceViewRenderer = null
@@ -180,6 +203,7 @@ class CallViewModel @Inject constructor(
         remoteSurfaceViewRenderer?.clearImage()
         remoteSurfaceViewRenderer?.isVisible = false
         remoteSurfaceViewRenderer = null
+        _isCallAcceptedPending.value = false
         viewModelScope.launch {
             incomingCallerSession.emit(null)
         }

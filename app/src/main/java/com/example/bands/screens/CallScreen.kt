@@ -2,6 +2,7 @@ package com.example.bands.screens
 
 import android.annotation.SuppressLint
 import android.transition.Visibility
+import android.util.Log
 import android.widget.FrameLayout
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -60,7 +61,8 @@ import org.webrtc.SurfaceViewRenderer
 
 @SuppressLint("SuspiciousIndentation")
 @Composable
-fun CallScreen(name:String,phoneNumber: String?,callViewModel: CallViewModel,navController: NavController) {
+fun CallScreen(name:String,phoneNumber: String?,isAudioCall:Boolean,callViewModel: CallViewModel,navController: NavController) {
+    Log.d("RTCC callscreen" ,"$isAudioCall")
     val context = LocalContext.current
     val localSurfaceViewRenderer = remember { SurfaceViewRenderer(context)}
     val remoteSurfaceViewRenderer = remember { SurfaceViewRenderer(context)}
@@ -75,7 +77,7 @@ fun CallScreen(name:String,phoneNumber: String?,callViewModel: CallViewModel,nav
         }
             delay(500)
             if (phoneNumber != null) {
-                callViewModel.startCall(phoneNumber)
+                callViewModel.startCall(phoneNumber,isAudioCall)
             }
             if (isCallAcceptedPending) {
                 callViewModel.acceptCallIfPending()
@@ -98,14 +100,12 @@ fun CallScreen(name:String,phoneNumber: String?,callViewModel: CallViewModel,nav
         }
         navController.popBackStack()
     }
-    MainVideoCallUI(callViewModel,navController,localSurfaceViewRenderer,remoteSurfaceViewRenderer)
-//    if (callType == "video") {
-//        Text("Starting Video Call with $name $phoneNumber")
-//        MainVideoCallUI(callViewModel,navController,localSurfaceViewRenderer,remoteSurfaceViewRenderer)
-//    } else if (callType=="audio"){
-//        Text("Starting Audio Call with $name $phoneNumber")
-//        AudioCallScreen(callViewModel,name,navController)
-//    }
+    //MainVideoCallUI(callViewModel,navController,localSurfaceViewRenderer,remoteSurfaceViewRenderer)
+    if (isAudioCall) {
+        AudioCallScreen(callViewModel,name,navController)
+    } else {
+        MainVideoCallUI(callViewModel,navController,localSurfaceViewRenderer,remoteSurfaceViewRenderer)
+    }
 }
 @Composable
 fun AudioCallScreen(callViewModel: CallViewModel, receiverName: String,navController: NavController) {

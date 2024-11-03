@@ -127,17 +127,18 @@ class CallViewModel @Inject constructor(
         }
     }
 
-    fun startCall(target: String) {
+    fun startCall(target: String,isAudioCall:Boolean= false) {
         this.target = target
-        Log.d("RTCC","startCall $target")
+        Log.d("RTCC","startCall $target $isAudioCall")
         if (rtcClient == null) {
            init(userName!!)
         }
         socketRepository.sendMessageToSocket(
             MessageModel(
-                "start_call", userName, target, null
+                "start_call", userName, target, null,isAudioCall
             )
         )
+        _isAudioCall.value=isAudioCall //from parameter
         _isInCall.value=true
     }
     fun acceptCall() {
@@ -149,10 +150,12 @@ class CallViewModel @Inject constructor(
             SessionDescription.Type.OFFER,
             incomingCallerSession.value?.data.toString()
         )
-        Log.d("RTCC","acceptCall $session , ${incomingCallerSession.value?.name}")
+        Log.d("RTCC","acceptCall $session , ${incomingCallerSession.value?.name} and $incomingCallerSession.value?.isAudioOnly")
         target = incomingCallerSession.value?.name!!
+        val isAudioOnly = incomingCallerSession.value?.isAudioOnly ?: false
+        _isAudioCall.value=isAudioOnly// from session msg
         rtcClient?.onRemoteSessionReceived(session)
-        rtcClient?.answer(incomingCallerSession.value?.name!!)
+        rtcClient?.answer(incomingCallerSession.value?.name!!,isAudioOnly)
         viewModelScope.launch {
             incomingCallerSession.emit(null)
         }
@@ -220,9 +223,10 @@ class CallViewModel @Inject constructor(
                         Toast.makeText(application, "user is not available", Toast.LENGTH_SHORT)
                             .show()
                     } else {
-                        rtcClient?.call(target)
+                        val isAudioOnly = message.isAudioOnly ?: false
+                        rtcClient?.call(target,isAudioOnly)
                     }
-                    Log.d("RTCC","call_response ${message.type}")
+                    Log.d("RTCC","call_response $message")
                 }
                 "offer_received" -> {
                     remoteSurfaceViewRenderer?.isVisible = true
@@ -237,7 +241,7 @@ class CallViewModel @Inject constructor(
                         message.data.toString()
                     )
                     rtcClient?.onRemoteSessionReceived(session)
-                    Log.d("RTCC","answer_received ${message.type} $session")
+                    Log.d("RTCC","answer_received $message $session")
                 }
                 "ice_candidate" -> {
                     try {
@@ -250,10 +254,10 @@ class CallViewModel @Inject constructor(
                                 receivingCandidate.sdpCandidate
                             )
                         )
-                        Log.d("RTCC","ice_candidate ${message.type} $receivingCandidate")
+                        Log.d("RTCC","ice_candidate $message $receivingCandidate")
                     } catch (e: Exception) {
                         e.printStackTrace()
-                        Log.d("RTCC","ice_candidate error ${message.type}")
+                        Log.d("RTCC","ice_candidate error $message")
                     }
                 }
             }

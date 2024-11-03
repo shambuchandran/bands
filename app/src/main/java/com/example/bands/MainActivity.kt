@@ -74,8 +74,8 @@ sealed class DestinationScreen(var route: String) {
     object GemChatPage : DestinationScreen("gemChatPage")
     @Serializable
     data class NewsArticleScreenRoute(val url: String)
-    object CallScreen : DestinationScreen("call/{name}/{phoneNumber}") {
-        fun createRoute( name:String,phoneNumber: String) = "call/$name/$phoneNumber"
+    object CallScreen : DestinationScreen("call/{name}/{phoneNumber}/{isAudioCall}") {
+        fun createRoute( name:String,phoneNumber: String,isAudioCall:Boolean) = "call/$name/$phoneNumber/$isAudioCall"
     }
 
 }
@@ -165,9 +165,13 @@ class MainActivity : FragmentActivity() {
                 composable(DestinationScreen.CallScreen.route) { backStackEntry ->
                     val name=backStackEntry.arguments?.getString("name")
                     val phoneNumber = backStackEntry.arguments?.getString("phoneNumber")
+                    val isAudioCall =backStackEntry.arguments?.getBoolean("isAudioCall")
+                    Log.d("RTCC call click ","$isAudioCall")
                     if (phoneNumber != null) {
                             if (name != null) {
-                                CallScreen(name,phoneNumber,callViewModel,navController)
+                                if (isAudioCall != null) {
+                                    CallScreen(name,phoneNumber,isAudioCall,callViewModel,navController)
+                                }
                             }
                     }
                 }
@@ -179,15 +183,8 @@ class MainActivity : FragmentActivity() {
                     incomingCallerName = incomingCallState.value?.name,
                     incomingCallerNumber = incomingCallState.value?.name,
                     onAcceptPressed = {
-//                        if (incomingCallState.value?.callMode == "video"){
-//                            callViewModel.acceptCall()
-//                            Toast.makeText(applicationContext,"video call",Toast.LENGTH_SHORT).show()
-//                        }else{
-//                            Toast.makeText(applicationContext,"audio call",Toast.LENGTH_SHORT).show()
-//                        }
-
                         navController.navigate(
-                            DestinationScreen.CallScreen.createRoute(incomingCallState.value?.name ?:"",incomingCallState.value?.name ?: "" )
+                            DestinationScreen.CallScreen.createRoute(incomingCallState.value?.name ?:"",incomingCallState.value?.name ?: "",incomingCallState.value?.isAudioOnly?: false )
                         )
                         //callViewModel.acceptCall()
                         callViewModel.setCallAcceptedPending(true)

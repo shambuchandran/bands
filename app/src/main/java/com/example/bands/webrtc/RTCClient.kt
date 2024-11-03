@@ -108,12 +108,6 @@ class RTCClient(
         localStream.addTrack(localVideoTrack)
         peerConnection?.addStream(localStream)
     }
-    fun startLocalAudio(){
-        localAudioTrack = peerConnectionFactory.createAudioTrack("local_track_audio", localAudioSource)
-        val localStream = peerConnectionFactory.createLocalMediaStream("local_stream")
-        localStream.addTrack(localAudioTrack)
-        peerConnection?.addStream(localStream)
-    }
     private fun getVideoCapturer(application: Application):CameraVideoCapturer{
         return Camera2Enumerator(application).run {
             deviceNames.find {
@@ -123,9 +117,16 @@ class RTCClient(
             }?: throw IllegalStateException()
         }
     }
-    fun call(target:String){
+    fun call(target:String,isAudioOnly:Boolean = false){
         val mediaConstraints =MediaConstraints()
-        mediaConstraints.mandatory.add(MediaConstraints.KeyValuePair("offerToReceiveVideo","true"))
+        //mediaConstraints.mandatory.add(MediaConstraints.KeyValuePair("offerToReceiveVideo","true"))
+        if (isAudioOnly) {
+            mediaConstraints.mandatory.add(MediaConstraints.KeyValuePair("offerToReceiveAudio", "true"))
+            mediaConstraints.mandatory.add(MediaConstraints.KeyValuePair("offerToReceiveVideo", "false"))
+        } else {
+            mediaConstraints.mandatory.add(MediaConstraints.KeyValuePair("offerToReceiveAudio", "true"))
+            mediaConstraints.mandatory.add(MediaConstraints.KeyValuePair("offerToReceiveVideo", "true"))
+        }
         peerConnection?.createOffer(object :SdpObserver{
             override fun onCreateSuccess(desc: SessionDescription?) {
                 peerConnection?.setLocalDescription(object :SdpObserver{
@@ -140,10 +141,10 @@ class RTCClient(
                         )
                         socketRepository.sendMessageToSocket(
                             MessageModel(
-                                "create_offer",userName,target,offer
+                                "create_offer",userName,target,offer,isAudioOnly
                             )
                         )
-                        Log.d("RTCC","create_offer $target")
+                        Log.d("RTCC", "create_offer $target, audioOnly: $isAudioOnly")
                     }
 
                     override fun onCreateFailure(p0: String?) {
@@ -180,7 +181,7 @@ class RTCClient(
             }
 
             override fun onSetSuccess() {
-                Log.d("RTCC","onRemoteSessionReceived Success")
+                Log.d("RTCC","onRemoteSessionReceived Success $session")
 
             }
 
@@ -196,9 +197,16 @@ class RTCClient(
         }, session)
 
     }
-    fun answer(target: String) {
+    fun answer(target: String,isAudioOnly: Boolean=false) {
         val constraints = MediaConstraints()
-        constraints.mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveVideo","true"))
+       // constraints.mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveVideo","true"))
+        if (isAudioOnly) {
+            constraints.mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveAudio", "true"))
+            constraints.mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveVideo", "false"))
+        } else {
+            constraints.mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveAudio", "true"))
+            constraints.mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveVideo", "true"))
+        }
         peerConnection?.createAnswer(object : SdpObserver {
             override fun onCreateSuccess(desc: SessionDescription?) {
                 peerConnection?.setLocalDescription(object : SdpObserver {
@@ -214,7 +222,7 @@ class RTCClient(
                         )
                         socketRepository.sendMessageToSocket(
                             MessageModel(
-                                "create_answer",userName,target,answer
+                                "create_answer",userName,target,answer,isAudioOnly
                             )
                         )
                         Log.d("RTCC","create_answer $target")

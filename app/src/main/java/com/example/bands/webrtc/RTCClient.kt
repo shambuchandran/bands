@@ -3,6 +3,7 @@ package com.example.bands.webrtc
 import android.app.Application
 import android.util.Log
 import com.example.bands.data.MessageModel
+import com.google.gson.Gson
 import org.webrtc.AudioTrack
 import org.webrtc.Camera2Enumerator
 import org.webrtc.CameraVideoCapturer
@@ -117,10 +118,10 @@ class RTCClient(
             }?: throw IllegalStateException()
         }
     }
-    fun call(target:String,isAudioOnly:Boolean = false){
+    fun call(target:String,isAudioOnly:String = "false"){
         val mediaConstraints =MediaConstraints()
         //mediaConstraints.mandatory.add(MediaConstraints.KeyValuePair("offerToReceiveVideo","true"))
-        if (isAudioOnly) {
+        if (isAudioOnly == "true") {
             mediaConstraints.mandatory.add(MediaConstraints.KeyValuePair("offerToReceiveAudio", "true"))
             mediaConstraints.mandatory.add(MediaConstraints.KeyValuePair("offerToReceiveVideo", "false"))
         } else {
@@ -144,7 +145,7 @@ class RTCClient(
                                 "create_offer",userName,target,offer,isAudioOnly
                             )
                         )
-                        Log.d("RTCC", "create_offer $target, audioOnly: $isAudioOnly")
+                        Log.d("RTCC", "Sending create_offer: ${Gson().toJson(MessageModel("create_offer", userName, target, offer, isAudioOnly))}")
                     }
 
                     override fun onCreateFailure(p0: String?) {
@@ -177,9 +178,7 @@ class RTCClient(
         peerConnection?.setRemoteDescription(object : SdpObserver {
             override fun onCreateSuccess(p0: SessionDescription?) {
 
-
             }
-
             override fun onSetSuccess() {
                 Log.d("RTCC","onRemoteSessionReceived Success $session")
 
@@ -197,10 +196,10 @@ class RTCClient(
         }, session)
 
     }
-    fun answer(target: String,isAudioOnly: Boolean=false) {
+    fun answer(target: String,isAudioOnly: String="false") {
         val constraints = MediaConstraints()
        // constraints.mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveVideo","true"))
-        if (isAudioOnly) {
+        if (isAudioOnly=="true") {
             constraints.mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveAudio", "true"))
             constraints.mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveVideo", "false"))
         } else {

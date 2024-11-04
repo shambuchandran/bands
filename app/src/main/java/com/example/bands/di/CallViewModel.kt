@@ -23,7 +23,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.webrtc.IceCandidate
 import org.webrtc.MediaStream
-import org.webrtc.PeerConnection
 import org.webrtc.SessionDescription
 import org.webrtc.SurfaceViewRenderer
 import javax.inject.Inject
@@ -53,67 +52,41 @@ class CallViewModel @Inject constructor(
     val incomingCallerSession: MutableStateFlow<MessageModel?> = MutableStateFlow(null)
     private val _isInCall = MutableStateFlow(false)
     val isInCall: StateFlow<Boolean> = _isInCall.asStateFlow()
-    private val _isAudioCall = MutableStateFlow(false)
-    val isAudioCall: StateFlow<Boolean> = _isAudioCall.asStateFlow()
+    private val _isAudioCall = MutableStateFlow("")
+    val isAudioCall: StateFlow<String> = _isAudioCall.asStateFlow()
 
     private val _isCallAcceptedPending = MutableStateFlow(false)
     val isCallAcceptedPending: StateFlow<Boolean> get() = _isCallAcceptedPending
-
-
 
     fun init(username: String) {
         if (isInitialized && this.userName == username) return
         isInitialized = true
         userName = username
         socketRepository.initSocket(username, this)
-        rtcClient =
-            RTCClient(application, username, socketRepository, object : PeerConnectionObserver() {
-                override fun onIceCandidate(p0: IceCandidate?) {
-                    super.onIceCandidate(p0)
-                    rtcClient?.addIceCandidate(p0)
-                    val candidate = hashMapOf(
-                        "sdpMid" to p0?.sdpMid,
-                        "sdpMLineIndex" to p0?.sdpMLineIndex,
-                        "sdpCandidate" to p0?.sdp
-                    )
+        setupRTCClient(username)
+    }
+    private fun setupRTCClient(username: String) {
+        rtcClient = RTCClient(application, username, socketRepository, object : PeerConnectionObserver() {
+            override fun onIceCandidate(p0: IceCandidate?) {
+                super.onIceCandidate(p0)
+                p0?.let {
+                    rtcClient?.addIceCandidate(it)
                     socketRepository.sendMessageToSocket(
-                        MessageModel(
-                            "ice_candidate", username, target, candidate
-                        )
+                        MessageModel("ice_candidate", username, target, mapOf(
+                            "sdpMid" to it.sdpMid,
+                            "sdpMLineIndex" to it.sdpMLineIndex,
+                            "sdpCandidate" to it.sdp
+                        ),_isAudioCall.value)
                     )
-                    Log.d("RTCC","ice_candidate")
                 }
+            }
 
-                override fun onConnectionChange(newState: PeerConnection.PeerConnectionState?) {
-                    super.onConnectionChange(newState)
-
+            override fun onAddStream(p0: MediaStream?) {
+                p0?.videoTracks?.firstOrNull()?.let { videoTrack ->
+                    remoteSurfaceViewRenderer?.let { videoTrack.addSink(it) }
                 }
-
-                override fun onAddStream(p0: MediaStream?) {
-                    super.onAddStream(p0)
-                    Log.d("RTCC", "onAddStream called with stream: $p0")
-
-                    if (p0 == null) {
-                        Log.e("RTCC", "MediaStream is null")
-                        return
-                    }
-
-                    if (p0.videoTracks.isNotEmpty()) {
-                        val videoTrack = p0.videoTracks[0]
-                        // Check if remoteSurfaceViewRenderer is initialized
-                        if (remoteSurfaceViewRenderer != null) {
-                            Log.d("RTCC", "Adding video track to remote surface")
-                            videoTrack.addSink(remoteSurfaceViewRenderer)
-                        } else {
-                            Log.e("RTCC", "remoteSurfaceViewRenderer is null")
-                        }
-                    } else {
-                        Log.e("RTCC", "No video tracks available in stream")
-                    }
-
-                    Log.d("RTCC","onAddStream completed for stream: $p0")
-                }
-            })
+            }
+        })
     }
 
     fun setCallAcceptedPending(isPending: Boolean) {
@@ -127,19 +100,21 @@ class CallViewModel @Inject constructor(
         }
     }
 
-    fun startCall(target: String,isAudioCall:Boolean= false) {
+    fun startCall(target: String,isAudioCall:String= "false") {
         this.target = target
         Log.d("RTCC","startCall $target $isAudioCall")
         if (rtcClient == null) {
            init(userName!!)
         }
+        _isInCall.value=true
+        _isAudioCall.value=isAudioCall
         socketRepository.sendMessageToSocket(
             MessageModel(
                 "start_call", userName, target, null,isAudioCall
             )
         )
-        _isAudioCall.value=isAudioCall //from parameter
-        _isInCall.value=true
+
+
     }
     fun acceptCall() {
         _isInCall.value=true
@@ -152,7 +127,7 @@ class CallViewModel @Inject constructor(
         )
         Log.d("RTCC","acceptCall $session , ${incomingCallerSession.value?.name} and $incomingCallerSession.value?.isAudioOnly")
         target = incomingCallerSession.value?.name!!
-        val isAudioOnly = incomingCallerSession.value?.isAudioOnly ?: false
+        val isAudioOnly = incomingCallerSession.value?.isAudioOnly ?: "false"
         _isAudioCall.value=isAudioOnly// from session msg
         rtcClient?.onRemoteSessionReceived(session)
         rtcClient?.answer(incomingCallerSession.value?.name!!,isAudioOnly)
@@ -182,35 +157,30 @@ class CallViewModel @Inject constructor(
     }
 
     override fun onCleared() {
-        isInitialized = false
-        _isInCall.value = false
-        localSurfaceViewRenderer?.release()
-        localSurfaceViewRenderer?.clearImage()
-        localSurfaceViewRenderer = null
-        remoteSurfaceViewRenderer?.release()
-        remoteSurfaceViewRenderer?.clearImage()
-        remoteSurfaceViewRenderer = null
+        onEndClicked()
         super.onCleared()
-        rtcClient=null
     }
 
     fun onEndClicked() {
         rtcClient?.endCall()
-        rtcClient=null
+        rtcClient = null
         _isInCall.value = false
         isInitialized = false
+        clearSurfaces()
+        _isCallAcceptedPending.value = false
+        viewModelScope.launch {
+            incomingCallerSession.emit(null)
+        }
+        socketRepository.closeSocket()
+        Log.d("RTCC","onEndClicked ${incomingCallerSession.value}")
+    }
+    private fun clearSurfaces() {
         localSurfaceViewRenderer?.release()
         localSurfaceViewRenderer?.clearImage()
         localSurfaceViewRenderer = null
         remoteSurfaceViewRenderer?.release()
         remoteSurfaceViewRenderer?.clearImage()
-        remoteSurfaceViewRenderer?.isVisible = false
         remoteSurfaceViewRenderer = null
-        _isCallAcceptedPending.value = false
-        viewModelScope.launch {
-            incomingCallerSession.emit(null)
-        }
-        Log.d("RTCC","onEndClicked $incomingCallerSession")
     }
 
     override fun onNewMessage(message: MessageModel) {
@@ -223,7 +193,7 @@ class CallViewModel @Inject constructor(
                         Toast.makeText(application, "user is not available", Toast.LENGTH_SHORT)
                             .show()
                     } else {
-                        val isAudioOnly = message.isAudioOnly ?: false
+                        val isAudioOnly = message.isAudioOnly ?: _isAudioCall.value
                         rtcClient?.call(target,isAudioOnly)
                     }
                     Log.d("RTCC","call_response $message")

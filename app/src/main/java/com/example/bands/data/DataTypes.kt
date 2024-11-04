@@ -47,12 +47,9 @@ data class MessageModel(
     val name: String? = null,
     val target: String? = null,
     val data: Any? = null,
-    val isAudioOnly: Boolean? = false
+    val isAudioOnly: String? = "false"
 )
-data class IncomingCallData(
-    val name: String?,
-    val phoneNumber: String,
-    val callType: String)
+
 
 data class IceCandidateModel(
     val sdpMid: String,

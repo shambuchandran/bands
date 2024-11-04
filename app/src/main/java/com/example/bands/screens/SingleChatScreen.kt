@@ -127,7 +127,7 @@ fun SingleChatScreen(
     val selectedMessageId = remember { mutableStateOf<String?>(null) }
 
 
-    
+
     LaunchedEffect(key1 = Unit) {
         mainUser?.phoneNumber?.let {
             callViewModel.init(it)
@@ -175,13 +175,13 @@ fun SingleChatScreen(
             },
             onStartVideoCallButtonClicked = {
                 chatUser.let {
-                    navController.navigate(DestinationScreen.CallScreen.createRoute(it.name?:"",it.phoneNumber?:"",false))
+                    navController.navigate(DestinationScreen.CallScreen.createRoute(it.name?:"",it.phoneNumber?:"","false"))
                     //it.phoneNumber?.let { it1 -> callViewModel.startCall(it1) }
                 }
             },
             onStartAudioCallButtonClicked = {
                 chatUser.let {
-                    navController.navigate(DestinationScreen.CallScreen.createRoute(it.name?:"",it.phoneNumber?:"",true))
+                    navController.navigate(DestinationScreen.CallScreen.createRoute(it.name?:"",it.phoneNumber?:"","true"))
                 }
             },
             showDeleteIcon = showDeleteIcon,

@@ -61,12 +61,13 @@ import org.webrtc.SurfaceViewRenderer
 
 @SuppressLint("SuspiciousIndentation")
 @Composable
-fun CallScreen(name:String,phoneNumber: String?,isAudioCall:Boolean,callViewModel: CallViewModel,navController: NavController) {
-    Log.d("RTCC callscreen" ,"$isAudioCall")
+fun CallScreen(name:String,phoneNumber: String?,isAudioCall:String,callViewModel: CallViewModel,navController: NavController) {
+    Log.d("RTCC callscreen" , isAudioCall)
     val context = LocalContext.current
     val localSurfaceViewRenderer = remember { SurfaceViewRenderer(context)}
     val remoteSurfaceViewRenderer = remember { SurfaceViewRenderer(context)}
     val isCallAcceptedPending by callViewModel.isCallAcceptedPending.collectAsState()
+
 
         LaunchedEffect(Unit) {
             callViewModel.setRemoteSurface(remoteSurfaceViewRenderer)
@@ -82,15 +83,17 @@ fun CallScreen(name:String,phoneNumber: String?,isAudioCall:Boolean,callViewMode
             if (isCallAcceptedPending) {
                 callViewModel.acceptCallIfPending()
             }
-
-
     }
+
     DisposableEffect(Unit) {
         onDispose {
             callViewModel.onEndClicked()
             callViewModel.rtcClient = null
             localSurfaceViewRenderer.release()
             remoteSurfaceViewRenderer.release()
+            navController.navigate("chatList") {
+                popUpTo("chatList") { inclusive = true }
+            }
         }
     }
     BackHandler {
@@ -98,10 +101,13 @@ fun CallScreen(name:String,phoneNumber: String?,isAudioCall:Boolean,callViewMode
             callViewModel.onEndClicked()
             callViewModel.rtcClient = null
         }
-        navController.popBackStack()
+        //navController.popBackStack()
+        navController.navigate("chatList") {
+            popUpTo("chatList") { inclusive = true }
+        }
     }
     //MainVideoCallUI(callViewModel,navController,localSurfaceViewRenderer,remoteSurfaceViewRenderer)
-    if (isAudioCall) {
+    if (isAudioCall =="true") {
         AudioCallScreen(callViewModel,name,navController)
     } else {
         MainVideoCallUI(callViewModel,navController,localSurfaceViewRenderer,remoteSurfaceViewRenderer)

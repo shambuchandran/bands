@@ -75,7 +75,7 @@ sealed class DestinationScreen(var route: String) {
     @Serializable
     data class NewsArticleScreenRoute(val url: String)
     object CallScreen : DestinationScreen("call/{name}/{phoneNumber}/{isAudioCall}") {
-        fun createRoute( name:String,phoneNumber: String,isAudioCall:Boolean) = "call/$name/$phoneNumber/$isAudioCall"
+        fun createRoute( name:String,phoneNumber: String,isAudioCall:String) = "call/$name/$phoneNumber/${isAudioCall}"
     }
 
 }
@@ -165,7 +165,7 @@ class MainActivity : FragmentActivity() {
                 composable(DestinationScreen.CallScreen.route) { backStackEntry ->
                     val name=backStackEntry.arguments?.getString("name")
                     val phoneNumber = backStackEntry.arguments?.getString("phoneNumber")
-                    val isAudioCall =backStackEntry.arguments?.getBoolean("isAudioCall")
+                    val isAudioCall =backStackEntry.arguments?.getString("isAudioCall")
                     Log.d("RTCC call click ","$isAudioCall")
                     if (phoneNumber != null) {
                             if (name != null) {
@@ -184,7 +184,7 @@ class MainActivity : FragmentActivity() {
                     incomingCallerNumber = incomingCallState.value?.name,
                     onAcceptPressed = {
                         navController.navigate(
-                            DestinationScreen.CallScreen.createRoute(incomingCallState.value?.name ?:"",incomingCallState.value?.name ?: "",incomingCallState.value?.isAudioOnly?: false )
+                            DestinationScreen.CallScreen.createRoute(incomingCallState.value?.name ?:"",incomingCallState.value?.name ?: "",incomingCallState.value?.isAudioOnly?: "false" )
                         )
                         //callViewModel.acceptCall()
                         callViewModel.setCallAcceptedPending(true)

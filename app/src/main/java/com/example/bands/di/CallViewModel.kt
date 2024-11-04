@@ -33,6 +33,7 @@ class CallViewModel @Inject constructor(
     private val application: Application,
     private val socketRepository: SocketRepository
 ) : ViewModel(), NewMessageInterface {
+    //private val visitedRoutes = mutableListOf<String>()
 
     private var isInitialized = false
     private var localSurfaceViewRenderer: SurfaceViewRenderer? = null
@@ -44,6 +45,8 @@ class CallViewModel @Inject constructor(
     fun setRemoteSurface(view: SurfaceViewRenderer) {
         this.remoteSurfaceViewRenderer = view
     }
+    //fun trackRoute(route: String) { if (!visitedRoutes.contains(route)) { visitedRoutes.add(route) } }
+    //fun wasRouteVisited(route: String): Boolean { return visitedRoutes.contains(route) }
 
     var rtcClient: RTCClient? = null
     private var userName: String? = ""
@@ -59,9 +62,10 @@ class CallViewModel @Inject constructor(
     val isCallAcceptedPending: StateFlow<Boolean> get() = _isCallAcceptedPending
 
     fun init(username: String) {
-        if (isInitialized && this.userName == username) return
-        isInitialized = true
-        userName = username
+//        if (isInitialized && this.userName == username) return
+//        isInitialized = true
+//        userName = username
+        if (this.userName == username) { isInitialized = true } else { userName = username }
         socketRepository.initSocket(username, this)
         setupRTCClient(username)
     }
@@ -158,15 +162,19 @@ class CallViewModel @Inject constructor(
 
     override fun onCleared() {
         onEndClicked()
+        clearSurfaces()
         super.onCleared()
     }
 
+
+
     fun onEndClicked() {
         rtcClient?.endCall()
+        stopVideoTrack()
+        clearSurfaces()
         rtcClient = null
         _isInCall.value = false
         isInitialized = false
-        clearSurfaces()
         _isCallAcceptedPending.value = false
         viewModelScope.launch {
             incomingCallerSession.emit(null)
@@ -174,6 +182,15 @@ class CallViewModel @Inject constructor(
         socketRepository.closeSocket()
         Log.d("RTCC","onEndClicked ${incomingCallerSession.value}")
     }
+    fun stopVideoTrack() {
+        clearSurfaces()
+        rtcClient?.localVideoTrack?.let { videoTrack ->
+            videoTrack.setEnabled(false)
+            videoTrack.dispose()
+            rtcClient?.localVideoTrack = null
+        }
+    }
+
     private fun clearSurfaces() {
         localSurfaceViewRenderer?.release()
         localSurfaceViewRenderer?.clearImage()

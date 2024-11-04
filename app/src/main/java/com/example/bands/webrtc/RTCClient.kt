@@ -67,8 +67,8 @@ class RTCClient(
     private val localVideoSource by lazy { peerConnectionFactory.createVideoSource(false) }
     private val localAudioSource by lazy { peerConnectionFactory.createAudioSource(MediaConstraints()) }
     private var videoCapturer: CameraVideoCapturer? = null
-    private var localAudioTrack: AudioTrack? = null
-    private var localVideoTrack: VideoTrack? = null
+     var localAudioTrack: AudioTrack? = null
+     var localVideoTrack: VideoTrack? = null
 
     private fun initPeerConnectionFactory(application: Application){
         val peerConnectionOption=PeerConnectionFactory.InitializationOptions.builder(application)
@@ -273,7 +273,13 @@ class RTCClient(
 
 
     fun endCall() {
-        peerConnection?.close()
+            localVideoTrack?.setEnabled(false)
+            localVideoTrack?.dispose()
+            localAudioTrack?.setEnabled(false)
+            localAudioTrack?.dispose()
+            localVideoTrack = null
+            localAudioTrack = null
+            peerConnection?.close()
     }
 
 

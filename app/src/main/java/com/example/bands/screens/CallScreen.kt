@@ -63,11 +63,11 @@ import org.webrtc.SurfaceViewRenderer
 @Composable
 fun CallScreen(name:String,phoneNumber: String?,isAudioCall:String,callViewModel: CallViewModel,navController: NavController) {
     Log.d("RTCC callscreen" , isAudioCall)
+    //LaunchedEffect(Unit) { callViewModel.trackRoute(DestinationScreen.ChatList.route) }
     val context = LocalContext.current
     val localSurfaceViewRenderer = remember { SurfaceViewRenderer(context)}
     val remoteSurfaceViewRenderer = remember { SurfaceViewRenderer(context)}
     val isCallAcceptedPending by callViewModel.isCallAcceptedPending.collectAsState()
-
 
         LaunchedEffect(Unit) {
             callViewModel.setRemoteSurface(remoteSurfaceViewRenderer)
@@ -85,15 +85,32 @@ fun CallScreen(name:String,phoneNumber: String?,isAudioCall:String,callViewModel
             }
     }
 
+
     DisposableEffect(Unit) {
         onDispose {
             callViewModel.onEndClicked()
+            callViewModel.stopVideoTrack()
             callViewModel.rtcClient = null
             localSurfaceViewRenderer.release()
             remoteSurfaceViewRenderer.release()
-            navController.navigate("chatList") {
-                popUpTo("chatList") { inclusive = true }
+
+
+            val currentRoute = navController.currentBackStackEntry?.destination?.route
+            if (currentRoute == DestinationScreen.CallScreen.route) {
+                navController.popBackStack()
+            } else {
+                navController.navigate(DestinationScreen.ChatList.route) {
+                    popUpTo(DestinationScreen.ChatList.route) { inclusive = true }
+                    launchSingleTop = true
+                }
             }
+            //navController.popBackStack()
+
+//            val singleChatScreenRoute = DestinationScreen.SingleChat.route
+//            if (callViewModel.wasRouteVisited(singleChatScreenRoute)) {
+//                navController.navigate(singleChatScreenRoute) { popUpTo(singleChatScreenRoute) { inclusive = true } }
+//            } else { navController.navigate(DestinationScreen.ChatList.route) { popUpTo(DestinationScreen.ChatList.route) { inclusive = true } } }
+
         }
     }
     BackHandler {
@@ -101,9 +118,14 @@ fun CallScreen(name:String,phoneNumber: String?,isAudioCall:String,callViewModel
             callViewModel.onEndClicked()
             callViewModel.rtcClient = null
         }
-        //navController.popBackStack()
-        navController.navigate("chatList") {
-            popUpTo("chatList") { inclusive = true }
+        val currentRoute = navController.currentBackStackEntry?.destination?.route
+        if (currentRoute == DestinationScreen.CallScreen.route) {
+            navController.popBackStack()
+        } else {
+            navController.navigate(DestinationScreen.ChatList.route) {
+                popUpTo(DestinationScreen.ChatList.route) { inclusive = true }
+                launchSingleTop = true
+            }
         }
     }
     //MainVideoCallUI(callViewModel,navController,localSurfaceViewRenderer,remoteSurfaceViewRenderer)

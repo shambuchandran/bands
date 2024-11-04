@@ -47,6 +47,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
@@ -82,8 +83,6 @@ import com.example.bands.utils.CommonImage
 import com.example.bands.utils.WeatherShowText
 import com.example.bands.utils.navigateTo
 import com.example.bands.weatherupdates.NetworkResponse
-import kotlinx.coroutines.delay
-import org.webrtc.SurfaceViewRenderer
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -126,7 +125,7 @@ fun SingleChatScreen(
     val showDeleteIcon = remember { mutableStateOf(false) }
     val selectedMessageId = remember { mutableStateOf<String?>(null) }
 
-
+    //LaunchedEffect(Unit) { callViewModel.trackRoute(DestinationScreen.SingleChat.route) }
 
     LaunchedEffect(key1 = Unit) {
         mainUser?.phoneNumber?.let {
@@ -143,6 +142,7 @@ fun SingleChatScreen(
         navigateTo(navController, DestinationScreen.ChatList.route)
         viewModel.releaseMessages()
     }
+
     val chatUserWeatherData: WeatherModel? = when (val result = chatUserCityNameResult.value) {
         is NetworkResponse.Error -> {
             null
@@ -175,13 +175,25 @@ fun SingleChatScreen(
             },
             onStartVideoCallButtonClicked = {
                 chatUser.let {
-                    navController.navigate(DestinationScreen.CallScreen.createRoute(it.name?:"",it.phoneNumber?:"","false"))
+                    navController.navigate(
+                        DestinationScreen.CallScreen.createRoute(
+                            it.name ?: "",
+                            it.phoneNumber ?: "",
+                            "false"
+                        )
+                    )
                     //it.phoneNumber?.let { it1 -> callViewModel.startCall(it1) }
                 }
             },
             onStartAudioCallButtonClicked = {
                 chatUser.let {
-                    navController.navigate(DestinationScreen.CallScreen.createRoute(it.name?:"",it.phoneNumber?:"","true"))
+                    navController.navigate(
+                        DestinationScreen.CallScreen.createRoute(
+                            it.name ?: "",
+                            it.phoneNumber ?: "",
+                            "true"
+                        )
+                    )
                 }
             },
             showDeleteIcon = showDeleteIcon,
@@ -532,14 +544,16 @@ fun ChatHeader(
                             showDeleteMessageDialog.value = true
 
                         }) {
-                            Icon(modifier = Modifier.size(32.dp),
+                            Icon(
+                                modifier = Modifier.size(32.dp),
                                 imageVector = Icons.Default.Delete,
                                 contentDescription = "delete message"
                             )
                         }
                     }
                     IconButton(onClick = { menuExpanded.value = !menuExpanded.value }) {
-                        Icon(modifier = Modifier.size(32.dp),
+                        Icon(
+                            modifier = Modifier.size(32.dp),
                             imageVector = Icons.Default.MoreVert,
                             contentDescription = "clear Chat"
                         )

@@ -2,6 +2,10 @@
 
 package com.example.bands.utils
 
+import android.content.Context
+import android.media.Ringtone
+import android.media.RingtoneManager
+import android.net.Uri
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.MarqueeAnimationMode
@@ -429,5 +433,16 @@ fun GradientCapsule(
             }
         }
         Spacer(modifier = Modifier.width(8.dp))
+    }
+}
+class RingtonePlayer(private val context:Context){
+    private var ringtone:Ringtone?=null
+    fun playRingTone(){
+        val ringtoneUri:Uri =RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+        ringtone = RingtoneManager.getRingtone(context, ringtoneUri)
+        ringtone?.play()
+    }
+    fun stopRingtone(){
+        ringtone?.stop()
     }
 }

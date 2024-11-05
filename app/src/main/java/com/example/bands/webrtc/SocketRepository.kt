@@ -34,7 +34,7 @@ class SocketRepository @Inject constructor() {
         connectSocket()
     }
     private fun connectSocket() {
-        webSocket = object : WebSocketClient(URI("ws://192.168.1.5:3000")) {
+        webSocket = object : WebSocketClient(URI("ws://192.168.1.4:3000")) {
             override fun onOpen(handshakedata: ServerHandshake?) {
                 Log.d(tag, "WebSocket connected")
                 _isConnected.value = true

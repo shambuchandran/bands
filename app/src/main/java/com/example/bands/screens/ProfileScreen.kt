@@ -209,7 +209,7 @@ fun ProfileImage(imageUrl: String?, viewModel: BandsViewModel) {
 fun ImageAtProfile(
     data: String?,
     modifier: Modifier = Modifier.fillMaxSize().background(colorResource(id = R.color.BgColor)),
-    contentScale: ContentScale = ContentScale.Crop,
+    contentScale: ContentScale = ContentScale.Fit,
 ) {
     val painter = rememberAsyncImagePainter(model = data)
     Image(

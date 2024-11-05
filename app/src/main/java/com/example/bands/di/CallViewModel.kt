@@ -7,6 +7,9 @@ import android.widget.Toast
 import androidx.core.view.isVisible
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
+import com.example.bands.DestinationScreen
 import com.example.bands.data.IceCandidateModel
 import com.example.bands.data.MessageModel
 import com.example.bands.data.NewMessageInterface
@@ -145,6 +148,11 @@ class CallViewModel @Inject constructor(
         viewModelScope.launch {
             incomingCallerSession.emit(null)
         }
+        socketRepository.sendMessageToSocket(
+            MessageModel(
+                "end_call", userName, target, null,null
+            )
+        )
         Log.d("RTCC","rejectCall $incomingCallerSession")
     }
 
@@ -179,6 +187,11 @@ class CallViewModel @Inject constructor(
         viewModelScope.launch {
             incomingCallerSession.emit(null)
         }
+        socketRepository.sendMessageToSocket(
+            MessageModel(
+                "end_call", userName, target, null,null
+            )
+        )
         socketRepository.closeSocket()
         Log.d("RTCC","onEndClicked ${incomingCallerSession.value}")
     }
@@ -246,6 +259,10 @@ class CallViewModel @Inject constructor(
                         e.printStackTrace()
                         Log.d("RTCC","ice_candidate error $message")
                     }
+                }
+                "call_ended" ->{
+                    onEndClicked()
+                    Log.d("RTCC", "call_ended $message")
                 }
             }
         }

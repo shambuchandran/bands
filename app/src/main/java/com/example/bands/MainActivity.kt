@@ -54,6 +54,7 @@ import com.example.bands.screens.SingleChatScreen
 import com.example.bands.screens.SingleStatusScreen
 import com.example.bands.screens.StatusScreen
 import com.example.bands.utils.MyAppTheme
+import com.example.bands.utils.RingtonePlayer
 import com.permissionx.guolindev.PermissionX
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.serialization.Serializable
@@ -82,9 +83,10 @@ sealed class DestinationScreen(var route: String) {
 
 @AndroidEntryPoint
 class MainActivity : FragmentActivity() {
+    private lateinit var ringtonePlayer: RingtonePlayer
     override fun onCreate(savedInstanceState: Bundle?) {
-
         super.onCreate(savedInstanceState)
+        ringtonePlayer = RingtonePlayer(this)
         setContent {
             // BandsTheme {
             MyAppTheme {
@@ -179,17 +181,22 @@ class MainActivity : FragmentActivity() {
             }
             Log.d("RTCC icc", " icc ${incomingCallState.value.toString()}")
             if (incomingCallState.value != null && !isInCall.value) {
+                ringtonePlayer.playRingTone()
                 IncomingCallComponent(
                     incomingCallerName = incomingCallState.value?.name,
                     incomingCallerNumber = incomingCallState.value?.name,
                     onAcceptPressed = {
+                        ringtonePlayer.stopRingtone()
                         navController.navigate(
                             DestinationScreen.CallScreen.createRoute(incomingCallState.value?.name ?:"",incomingCallState.value?.name ?: "",incomingCallState.value?.isAudioOnly?: "false" )
                         )
                         //callViewModel.acceptCall()
                         callViewModel.setCallAcceptedPending(true)
                     },
-                    onRejectPressed = callViewModel::rejectCall
+                    onRejectPressed = {
+                        ringtonePlayer.stopRingtone()
+                        callViewModel.rejectCall()
+                    }
                 )
             }
 
@@ -203,7 +210,8 @@ class MainActivity : FragmentActivity() {
             Manifest.permission.CAMERA,
             Manifest.permission.RECORD_AUDIO,
             Manifest.permission.READ_EXTERNAL_STORAGE,
-            Manifest.permission.SYSTEM_ALERT_WINDOW
+            Manifest.permission.SYSTEM_ALERT_WINDOW,
+            Manifest.permission.VIBRATE,
         )
             .onExplainRequestReason { scope, deniedList ->
                 val message =

@@ -193,7 +193,8 @@ fun AudioCallScreen(callViewModel: CallViewModel, receiverName: String,navContro
                 onAudioButtonClicked = callViewModel::audioButtonClicked,
                 onCameraButtonClicked = {},
                 onEndCallClicked = {callViewModel.onEndClicked()
-                    navController.popBackStack()},
+                    navController.popBackStack()
+                    },
                 onSwitchCameraClicked = {},
                 isAudioCall = true
             )
@@ -308,8 +309,8 @@ fun MainVideoCallUI(callViewModel: CallViewModel,navController: NavController,lo
         //isVisible = isCallVisible,
         callViewModel,
         onEndCall = {
-            navController.popBackStack()
             callViewModel.onEndClicked()
+            navController.popBackStack()
             //isCallVisible = false
         },
         onSwitchCamera = { callViewModel.cameraSwitchClicked() },

@@ -124,7 +124,8 @@ fun StatusScreen(navController: NavController, viewModel: BandsViewModel,weather
                         LazyRow(
                             modifier = Modifier
                                 .wrapContentHeight()
-                                .padding(8.dp)
+                                .padding(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             // My Status or Add Icon
                             item {
@@ -215,20 +216,24 @@ fun StatusScreen(navController: NavController, viewModel: BandsViewModel,weather
 
 @Composable
 fun AddStatusIcon(onAddClick: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .size(56.dp)
-            .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.primary)
-            .clickable(onClick = onAddClick),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            imageVector = Icons.Rounded.Add,
-            contentDescription = "Add Status",
-            tint = Color.White,
-            modifier = Modifier.size(36.dp)
-        )
+    Column(horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center) {
+        Box(
+            modifier = Modifier
+                .size(56.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primary)
+                .clickable(onClick = onAddClick),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Add,
+                contentDescription = "Add Status",
+                tint = Color.White,
+                modifier = Modifier.size(36.dp)
+            )
+        }
+        Text(text = "Add", color = Color.White, fontWeight = FontWeight.Bold,modifier = Modifier.padding(top = 8.dp))
     }
 }
 

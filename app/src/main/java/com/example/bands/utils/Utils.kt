@@ -231,13 +231,13 @@ fun CommonStatus(imageUrl: String?, name: String?, onItemClick: () -> Unit) {
             data = imageUrl,
             modifier = Modifier
                 .padding(8.dp)
-                .size(54.dp)
+                .size(56.dp)
                 .clip(CircleShape)
                 .background(Color.Gray)
         )
         Text(
-            text = name ?: "---", fontWeight = FontWeight.Bold, modifier = Modifier
-                .padding(start = 4.dp)
+            text = name ?: "---", color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier
+                .padding(top =2.dp)
         )
     }
 }

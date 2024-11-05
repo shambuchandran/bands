@@ -33,6 +33,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.PhoneAuthCredential
 import com.google.firebase.auth.PhoneAuthOptions
 import com.google.firebase.auth.PhoneAuthProvider
+import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.Filter
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
@@ -41,6 +42,7 @@ import com.google.firebase.firestore.toObject
 import com.google.firebase.firestore.toObjects
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.storage.FirebaseStorage
+import com.google.firebase.storage.StorageReference
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -638,10 +640,10 @@ class BandsViewModel @Inject constructor(
     }
 
     fun loadStatuses() {
-        val statusShowTime = 24L * 60 * 60 * 1000
-        Log.d("statusShowTime",statusShowTime.toString())
-        val timeFrame = System.currentTimeMillis() - statusShowTime
-        Log.d("timeFrame",timeFrame.toString())
+//        val statusShowTime = 24L * 60 * 60 * 1000
+//        Log.d("statusShowTime","statusShowTime ${statusShowTime}")
+//        val timeFrame = System.currentTimeMillis() - statusShowTime
+//        Log.d("statusShowTime","timeFrame ${timeFrame}")
         inProgressStatus.value = true
         db.collection(CHATS)
             .where(
@@ -672,13 +674,39 @@ class BandsViewModel @Inject constructor(
                             .addSnapshotListener { value, error ->
                                 if (error != null) {
                                     handleException(error)
-                                    Log.d("loadStatuses value",error.toString())
+                                    Log.d("statusShowTime loadStatuses value",error.toString())
                                     inProgressStatus.value = false
+                                    return@addSnapshotListener
                                 }
                                 if (value != null) {
+                                    val currentTime = System.currentTimeMillis()
+                                    val statusesToDelete = mutableListOf<DocumentReference>()
+                                    val imagesToDelete = mutableListOf<String>()
+                                    for (document in value.documents) {
+                                        val status = document.toObject(Status::class.java)
+                                        if (status != null && status.timeStamp != null && (currentTime - status.timeStamp) > 5L * 60 * 1000) {
+                                            statusesToDelete.add(document.reference)
+                                            status.imageUrl?.let { imagesToDelete.add(it) }
+                                        }
+                                    }
+                                    if (statusesToDelete.isNotEmpty()) {
+                                        for (i in statusesToDelete.indices) {
+                                            val statusRef = statusesToDelete[i]
+                                            if (i < imagesToDelete.size) {
+                                                deleteImageFromFirebase(imagesToDelete[i])
+                                            }
+                                            statusRef.delete()
+                                                .addOnSuccessListener {
+                                                    Log.d("Delete Status", "Status document ${statusRef.id} deleted successfully.")
+                                                }
+                                                .addOnFailureListener { e ->
+                                                    Log.w("Delete Status", "Error deleting status document ${statusRef.id}", e)
+                                                }
+                                        }
+                                    }
                                     //status.value = value.toObjects()
                                     _status.update { value.toObjects<Status>() }
-                                    Log.d("sts",_status.toString())
+                                    Log.d("statusShowTime","$value")
                                     inProgressStatus.value = false
                                 }
                             }
@@ -687,7 +715,16 @@ class BandsViewModel @Inject constructor(
                     inProgressStatus.value = false
                 }
             }
-
+    }
+    private fun deleteImageFromFirebase(url: String) {
+        val imageRef: StorageReference = storage.getReferenceFromUrl(url)
+        imageRef.delete()
+            .addOnSuccessListener {
+                Log.d("Delete Image", "Image deleted successfully from Firebase Storage.")
+            }
+            .addOnFailureListener { exception ->
+                Log.w("Delete Image", "Error deleting image: ", exception)
+            }
     }
 
     fun removeStatus(userId: String,index: Int) {
@@ -711,6 +748,9 @@ class BandsViewModel @Inject constructor(
                 for (doc in documents) {
                     statusCollection.document(doc.id).delete().addOnSuccessListener {
                         Log.d("BandsViewModel", "Status successfully deleted!")
+                        selectedStatus.imageUrl?.let {
+                            deleteImageFromFirebase(it)
+                        }
                     }.addOnFailureListener {
                         handleException(it)
                         Log.w("BandsViewModel", "Error deleting status", it)

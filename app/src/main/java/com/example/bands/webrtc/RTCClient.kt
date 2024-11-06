@@ -2,7 +2,7 @@ package com.example.bands.webrtc
 
 import android.app.Application
 import android.util.Log
-import com.example.bands.data.MessageModel
+import com.example.bands.data.CallMessageModel
 import com.google.gson.Gson
 import org.webrtc.AudioTrack
 import org.webrtc.Camera2Enumerator
@@ -141,11 +141,11 @@ class RTCClient(
                             "type" to desc?.type
                         )
                         socketRepository.sendMessageToSocket(
-                            MessageModel(
+                            CallMessageModel(
                                 "create_offer",userName,target,offer,isAudioOnly
                             )
                         )
-                        Log.d("RTCC", "Sending create_offer: ${Gson().toJson(MessageModel("create_offer", userName, target, offer, isAudioOnly))}")
+                        Log.d("RTCC", "Sending create_offer: ${Gson().toJson(CallMessageModel("create_offer", userName, target, offer, isAudioOnly))}")
                     }
 
                     override fun onCreateFailure(p0: String?) {
@@ -220,7 +220,7 @@ class RTCClient(
 
                         )
                         socketRepository.sendMessageToSocket(
-                            MessageModel(
+                            CallMessageModel(
                                 "create_answer",userName,target,answer,isAudioOnly
                             )
                         )

@@ -42,14 +42,21 @@ data class Status(
     val timeStamp: Long? = null,
 )
 
-data class MessageModel(
+data class CallMessageModel(
     val type: String,
     val name: String? = null,
     val target: String? = null,
     val data: Any? = null,
     val isAudioOnly: String? = "false"
 )
-
+data class CallLog(
+    val caller: String,
+    val target: String,
+    val callType: String,
+    val startTime: Long,
+    val endTime: Long? = null,
+    val status: String
+)
 
 data class IceCandidateModel(
     val sdpMid: String,
@@ -64,7 +71,7 @@ data class GemMessageModel(
 )
 
 interface NewMessageInterface {
-    fun onNewMessage(message: MessageModel)
+    fun onNewMessage(message: CallMessageModel)
 }
 
 

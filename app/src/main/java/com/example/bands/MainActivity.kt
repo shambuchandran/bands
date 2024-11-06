@@ -23,7 +23,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -57,6 +59,9 @@ import com.example.bands.utils.MyAppTheme
 import com.example.bands.utils.RingtonePlayer
 import com.permissionx.guolindev.PermissionX
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 
 sealed class DestinationScreen(var route: String) {
@@ -111,6 +116,7 @@ class MainActivity : FragmentActivity() {
         val weatherViewModel = hiltViewModel<WeatherViewModel>()
         val incomingCallState = callViewModel.incomingCallerSession.collectAsState(null)
         val isInCall =callViewModel.isInCall.collectAsState(false)
+
         Box {
             NavHost(
                 navController = navController,
@@ -182,6 +188,15 @@ class MainActivity : FragmentActivity() {
             Log.d("RTCC icc", " icc ${incomingCallState.value.toString()}")
             if (incomingCallState.value != null && !isInCall.value) {
                 ringtonePlayer.playRingTone()
+                LaunchedEffect (incomingCallState.value){
+                        delay(60000)
+                        if (!isInCall.value){
+                            ringtonePlayer.stopRingtone()
+                            callViewModel.handleMissedCall()
+                            callViewModel.rejectCall()
+                        }
+                }
+
                 IncomingCallComponent(
                     incomingCallerName = incomingCallState.value?.name,
                     incomingCallerNumber = incomingCallState.value?.name,

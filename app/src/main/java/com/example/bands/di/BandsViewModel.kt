@@ -196,32 +196,6 @@ class BandsViewModel @Inject constructor(
             availability= availability,
             city = city
         )
-//        uid.let {
-//            inProgress.value = true
-//            db.collection(USER_NODE).document(uid!!).get().addOnSuccessListener {
-//                if (it.exists()) {
-//                    db.collection(USER_NODE).document(uid).set(userData).addOnSuccessListener {
-//                        inProgress.value = false
-//                        getUserData(uid)
-//                        updateUserDetailsInChatsAndStatus(userData)
-//                        updateAvailability(Availability.ONLINE)
-//                    }.addOnFailureListener {
-//                        handleException(it, customMessage = "Cannot update user")
-//                        Log.d("createOrUpdateProfile on success",it.toString())
-//                        inProgress.value = false
-//                    }
-//                } else {
-//                    db.collection(USER_NODE).document(uid).set(userData)
-//                    inProgress.value = false
-//                    getUserData(uid)
-//                    updateAvailability(Availability.ONLINE)
-//                }
-//            }.addOnFailureListener {
-//                handleException(it, "Cannot retrieve User")
-//                Log.d("createOrUpdateProfile on fail",it.toString())
-//                inProgress.value = false
-//            }
-//        }
         db.collection(USER_NODE).document(uid).set(userData, SetOptions.merge())
             .addOnSuccessListener {
                 inProgress.value = false

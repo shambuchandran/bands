@@ -54,6 +54,7 @@ import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import com.example.bands.DestinationScreen
 import com.example.bands.R
+import com.example.bands.di.CallStatus
 import com.example.bands.di.CallViewModel
 import com.example.bands.utils.navigateTo
 import kotlinx.coroutines.delay
@@ -68,6 +69,7 @@ fun CallScreen(name:String,phoneNumber: String?,isAudioCall:String,callViewModel
     val localSurfaceViewRenderer = remember { SurfaceViewRenderer(context)}
     val remoteSurfaceViewRenderer = remember { SurfaceViewRenderer(context)}
     val isCallAcceptedPending by callViewModel.isCallAcceptedPending.collectAsState()
+    val callStatus by callViewModel.callStatus.collectAsState()
 
         LaunchedEffect(Unit) {
             callViewModel.setRemoteSurface(remoteSurfaceViewRenderer)
@@ -88,7 +90,7 @@ fun CallScreen(name:String,phoneNumber: String?,isAudioCall:String,callViewModel
 
     DisposableEffect(Unit) {
         onDispose {
-            callViewModel.onEndClicked()
+            callViewModel.onEndClicked(CallStatus.NOTINCALL)
             callViewModel.stopVideoTrack()
             callViewModel.rtcClient = null
             localSurfaceViewRenderer.release()
@@ -115,7 +117,7 @@ fun CallScreen(name:String,phoneNumber: String?,isAudioCall:String,callViewModel
     }
     BackHandler {
         if (callViewModel.isInCall.value) {
-            callViewModel.onEndClicked()
+            callViewModel.onEndClicked(CallStatus.NOTINCALL)
             callViewModel.rtcClient = null
         }
         val currentRoute = navController.currentBackStackEntry?.destination?.route
@@ -125,6 +127,26 @@ fun CallScreen(name:String,phoneNumber: String?,isAudioCall:String,callViewModel
             navController.navigate(DestinationScreen.ChatList.route) {
                 popUpTo(DestinationScreen.ChatList.route) { inclusive = true }
                 launchSingleTop = true
+            }
+        }
+    }
+    LaunchedEffect(callStatus) {
+        when (callStatus) {
+            CallStatus.NOTINCALL ->{
+            }
+            CallStatus.REJECTED -> {
+                navController.popBackStack(DestinationScreen.ChatList.route, false)
+            }
+            CallStatus.MISSED -> {
+                navController.popBackStack(DestinationScreen.ChatList.route, false)
+            }
+            CallStatus.ONGOING -> {
+            }
+            CallStatus.COMPLETED ->{
+                navController.popBackStack(DestinationScreen.ChatList.route, false)
+                //callViewModel.setCallStatus(CallStatus.NOTINCALL)
+            }
+            else -> {
             }
         }
     }
@@ -192,7 +214,7 @@ fun AudioCallScreen(callViewModel: CallViewModel, receiverName: String,navContro
                     .fillMaxWidth(),
                 onAudioButtonClicked = callViewModel::audioButtonClicked,
                 onCameraButtonClicked = {},
-                onEndCallClicked = {callViewModel.onEndClicked()
+                onEndCallClicked = {callViewModel.onEndClicked(CallStatus.COMPLETED)
                     navController.popBackStack()
                     },
                 onSwitchCameraClicked = {},
@@ -309,7 +331,7 @@ fun MainVideoCallUI(callViewModel: CallViewModel,navController: NavController,lo
         //isVisible = isCallVisible,
         callViewModel,
         onEndCall = {
-            callViewModel.onEndClicked()
+            callViewModel.onEndClicked(CallStatus.COMPLETED)
             navController.popBackStack()
             //isCallVisible = false
         },

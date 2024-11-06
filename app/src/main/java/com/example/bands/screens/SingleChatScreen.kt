@@ -77,6 +77,7 @@ import com.example.bands.R
 import com.example.bands.data.Message
 import com.example.bands.data.api.WeatherModel
 import com.example.bands.di.BandsViewModel
+import com.example.bands.di.CallStatus
 import com.example.bands.di.CallViewModel
 import com.example.bands.di.WeatherViewModel
 import com.example.bands.utils.CommonImage
@@ -128,6 +129,7 @@ fun SingleChatScreen(
     //LaunchedEffect(Unit) { callViewModel.trackRoute(DestinationScreen.SingleChat.route) }
 
     LaunchedEffect(key1 = Unit) {
+        callViewModel.setCallStatus(CallStatus.NOTINCALL)
         mainUser?.phoneNumber?.let {
             callViewModel.init(it)
         }
@@ -137,7 +139,7 @@ fun SingleChatScreen(
 
     BackHandler {
         if (callViewModel.isInCall.value) {
-            callViewModel.onEndClicked()
+            callViewModel.onEndClicked(CallStatus.NOTINCALL)
         }
         navigateTo(navController, DestinationScreen.ChatList.route)
         viewModel.releaseMessages()
@@ -174,6 +176,7 @@ fun SingleChatScreen(
                 viewModel.releaseMessages()
             },
             onStartVideoCallButtonClicked = {
+                callViewModel.setCallStatus(CallStatus.ONGOING)
                 chatUser.let {
                     navController.navigate(
                         DestinationScreen.CallScreen.createRoute(
@@ -186,6 +189,7 @@ fun SingleChatScreen(
                 }
             },
             onStartAudioCallButtonClicked = {
+                callViewModel.setCallStatus(CallStatus.ONGOING)
                 chatUser.let {
                     navController.navigate(
                         DestinationScreen.CallScreen.createRoute(

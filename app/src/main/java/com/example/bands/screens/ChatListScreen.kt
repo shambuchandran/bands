@@ -55,6 +55,7 @@ import androidx.navigation.NavController
 import com.example.bands.DestinationScreen
 import com.example.bands.data.api.WeatherModel
 import com.example.bands.di.BandsViewModel
+import com.example.bands.di.CallStatus
 import com.example.bands.di.CallViewModel
 import com.example.bands.di.WeatherViewModel
 import com.example.bands.utils.CommonProgressBar
@@ -135,6 +136,7 @@ fun ChatListScreen(
 
 
         LaunchedEffect(key1 = Unit) {
+            //callViewModel.setCallStatus(CallStatus.NOTINCALL)
             userData?.phoneNumber?.let {
                 callViewModel.init(it)
             }

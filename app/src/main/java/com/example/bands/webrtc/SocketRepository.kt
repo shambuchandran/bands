@@ -3,7 +3,7 @@ package com.example.bands.webrtc
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import com.example.bands.data.MessageModel
+import com.example.bands.data.CallMessageModel
 import com.example.bands.data.NewMessageInterface
 import com.google.gson.Gson
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,21 +34,21 @@ class SocketRepository @Inject constructor() {
         connectSocket()
     }
     private fun connectSocket() {
-        webSocket = object : WebSocketClient(URI("ws://192.168.1.4:3000")) {
+        webSocket = object : WebSocketClient(URI("ws://192.168.1.5:3000")) {
             override fun onOpen(handshakedata: ServerHandshake?) {
                 Log.d(tag, "WebSocket connected")
                 _isConnected.value = true
                 retryCount = 0
                 sendMessageToSocket(
-                    MessageModel("store_user", userName, null, null)
+                    CallMessageModel("store_user", userName, null, null)
                 )
             }
             override fun onMessage(message: String?) {
                 Log.d(tag, "WebSocket message received: $message")
                 try {
-                    val messageModel = gson.fromJson(message, MessageModel::class.java)
-                    Log.d(tag, "WebSocket message received DESERIL: $messageModel")
-                    messageInterface?.onNewMessage(gson.fromJson(message, MessageModel::class.java))
+                    val callMessageModel = gson.fromJson(message, CallMessageModel::class.java)
+                    Log.d(tag, "WebSocket message received DESERIL: $callMessageModel")
+                    messageInterface?.onNewMessage(gson.fromJson(message, CallMessageModel::class.java))
                 } catch (e: Exception) {
                     Log.e(tag, "Error parsing WebSocket message: ${e.message}")
                 }
@@ -82,7 +82,7 @@ class SocketRepository @Inject constructor() {
             }
         }, retryDelay)
     }
-    fun sendMessageToSocket(message: MessageModel) {
+    fun sendMessageToSocket(message: CallMessageModel) {
         try {
             if (_isConnected.value) {
                 webSocket?.send(gson.toJson(message))

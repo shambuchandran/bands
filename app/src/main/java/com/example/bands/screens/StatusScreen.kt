@@ -107,8 +107,7 @@ fun StatusScreen(navController: NavController, viewModel: BandsViewModel,weather
                         .fillMaxSize()
                         .padding(it)
                 ) {
-                    CommonTitleText(text = stringResource(R.string.happening),weatherData)
-
+                    CommonTitleText(text = stringResource(R.string.happening),weatherData,showSearchBar = false)
                     if (statuses.isEmpty()) {
                         Column(
                             modifier = Modifier

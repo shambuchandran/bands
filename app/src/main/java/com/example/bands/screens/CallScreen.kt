@@ -90,7 +90,7 @@ fun CallScreen(name:String,phoneNumber: String?,isAudioCall:String,callViewModel
 
     DisposableEffect(Unit) {
         onDispose {
-            callViewModel.onEndClicked(CallStatus.NOTINCALL)
+            callViewModel.onEndClicked(CallStatus.COMPLETED)
             callViewModel.stopVideoTrack()
             callViewModel.rtcClient = null
             localSurfaceViewRenderer.release()
@@ -144,7 +144,6 @@ fun CallScreen(name:String,phoneNumber: String?,isAudioCall:String,callViewModel
             }
             CallStatus.COMPLETED ->{
                 navController.popBackStack(DestinationScreen.ChatList.route, false)
-                //callViewModel.setCallStatus(CallStatus.NOTINCALL)
             }
             else -> {
             }

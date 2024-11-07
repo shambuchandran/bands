@@ -41,9 +41,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.example.bands.di.BandsViewModel
+import com.example.bands.di.CallStatus
 import com.example.bands.di.CallViewModel
 import com.example.bands.di.GemBotViewModel
 import com.example.bands.di.WeatherViewModel
+import com.example.bands.screens.CallLogsScreen
 import com.example.bands.screens.CallScreen
 import com.example.bands.screens.ChatListScreen
 import com.example.bands.screens.GemChatPage
@@ -62,6 +64,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.serialization.DeserializationStrategy
 import kotlinx.serialization.Serializable
 
 sealed class DestinationScreen(var route: String) {
@@ -70,6 +73,7 @@ sealed class DestinationScreen(var route: String) {
     object Login : DestinationScreen("login")
     object Profile : DestinationScreen("profile")
     object ChatList : DestinationScreen("chatList")
+    object CallLogs : DestinationScreen("callLogs")
     object SingleChat : DestinationScreen("singleChat/{chatId}") {
         fun createRoute(id: String) = "singleChat/$id"
     }
@@ -116,6 +120,7 @@ class MainActivity : FragmentActivity() {
         val weatherViewModel = hiltViewModel<WeatherViewModel>()
         val incomingCallState = callViewModel.incomingCallerSession.collectAsState(null)
         val isInCall =callViewModel.isInCall.collectAsState(false)
+        val userData = viewModel.userData.value
 
         Box {
             NavHost(
@@ -157,6 +162,9 @@ class MainActivity : FragmentActivity() {
                 composable(DestinationScreen.Profile.route) {
                     ProfileScreen(navController, viewModel)
                 }
+                composable(DestinationScreen.CallLogs.route) {
+                    CallLogsScreen(callViewModel)
+                }
                 composable(DestinationScreen.StatusList.route) {
                     StatusScreen(navController, viewModel, weatherViewModel)
                 }
@@ -187,6 +195,9 @@ class MainActivity : FragmentActivity() {
             }
             Log.d("RTCC icc", " icc ${incomingCallState.value.toString()}")
             if (incomingCallState.value != null && !isInCall.value) {
+                userData?.phoneNumber?.let { callViewModel.init(it)
+                    Log.d("call init","${userData.phoneNumber}")
+                }
                 ringtonePlayer.playRingTone()
                 LaunchedEffect (incomingCallState.value){
                         delay(60000)
@@ -201,16 +212,17 @@ class MainActivity : FragmentActivity() {
                     incomingCallerName = incomingCallState.value?.name,
                     incomingCallerNumber = incomingCallState.value?.name,
                     onAcceptPressed = {
+                        callViewModel.setCallStatus(CallStatus.ONGOING)
                         ringtonePlayer.stopRingtone()
                         navController.navigate(
                             DestinationScreen.CallScreen.createRoute(incomingCallState.value?.name ?:"",incomingCallState.value?.name ?: "",incomingCallState.value?.isAudioOnly?: "false" )
                         )
-                        //callViewModel.acceptCall()
                         callViewModel.setCallAcceptedPending(true)
                     },
                     onRejectPressed = {
                         ringtonePlayer.stopRingtone()
                         callViewModel.rejectCall()
+                        navController.navigate(DestinationScreen.ChatList.route)
                     }
                 )
             }

@@ -25,6 +25,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import org.webrtc.IceCandidate
 import org.webrtc.MediaStream
@@ -46,16 +47,12 @@ class CallViewModel @Inject constructor(
     private val socketRepository: SocketRepository,
     private val fireStore: FirebaseFirestore,
 ) : ViewModel(), NewMessageInterface {
-    //private val visitedRoutes = mutableListOf<String>()
-    //private val navController=NavController(application)
 
     private val _callStatus = MutableStateFlow<CallStatus?>(null)
     val callStatus: StateFlow<CallStatus?> = _callStatus.asStateFlow()
-
     private var isInitialized = false
     private var localSurfaceViewRenderer: SurfaceViewRenderer? = null
     private var remoteSurfaceViewRenderer: SurfaceViewRenderer? = null
-
     fun setLocalSurface(view: SurfaceViewRenderer) {
         this.localSurfaceViewRenderer = view
     }
@@ -65,8 +62,6 @@ class CallViewModel @Inject constructor(
     fun setCallStatus(status: CallStatus) {
         _callStatus.value = status
     }
-    //fun trackRoute(route: String) { if (!visitedRoutes.contains(route)) { visitedRoutes.add(route) } }
-    //fun wasRouteVisited(route: String): Boolean { return visitedRoutes.contains(route) }
 
     var rtcClient: RTCClient? = null
     private var userName: String? = ""
@@ -80,23 +75,15 @@ class CallViewModel @Inject constructor(
 
     private val _isCallAcceptedPending = MutableStateFlow(false)
     val isCallAcceptedPending: StateFlow<Boolean> get() = _isCallAcceptedPending
+    private val _callLogs = MutableStateFlow<List<CallLog>>(emptyList())
+    val callLogs: StateFlow<List<CallLog>> = _callLogs.asStateFlow()
+
 
     fun init(username: String) {
-//        if (isInitialized && this.userName == username) return
-//        isInitialized = true
-//        userName = username
-        val callLog = CallLog(
-            caller = userName!!,
-            target = target,
-            callType ="false",
-            startTime = System.currentTimeMillis(),
-            status = CallStatus.NOTINCALL.name
-        )
-        saveCallLog(callLog)
-
         if (this.userName == username) { isInitialized = true } else { userName = username }
         socketRepository.initSocket(username, this)
         setupRTCClient(username)
+        setCallStatus(CallStatus.NOTINCALL)
     }
     private fun setupRTCClient(username: String) {
         rtcClient = RTCClient(application, username, socketRepository, object : PeerConnectionObserver() {
@@ -139,14 +126,6 @@ class CallViewModel @Inject constructor(
         if (rtcClient == null) {
            init(userName!!)
         }
-        val callLog = CallLog(
-            caller = userName!!,
-            target = target,
-            callType = if (isAudioCall == "true") "audio" else "video",
-            startTime = System.currentTimeMillis(),
-            status = CallStatus.NOTINCALL.name
-        )
-        saveCallLog(callLog)
         _isInCall.value=true
         _isAudioCall.value=isAudioCall
         socketRepository.sendMessageToSocket(
@@ -162,6 +141,7 @@ class CallViewModel @Inject constructor(
         if (rtcClient == null) {
             init(userName!!)
         }
+        setCallStatus(CallStatus.ONGOING)
         val session = SessionDescription(
             SessionDescription.Type.OFFER,
             incomingCallerSession.value?.data.toString()
@@ -172,14 +152,7 @@ class CallViewModel @Inject constructor(
         _isAudioCall.value=isAudioOnly// from session msg
         rtcClient?.onRemoteSessionReceived(session)
         rtcClient?.answer(incomingCallerSession.value?.name!!,isAudioOnly)
-
-        val callLog = CallLog(
-            caller = userName!!,
-            target = target,
-            callType = if (isAudioOnly == "true") "audio" else "video",
-            startTime = System.currentTimeMillis(),
-            status = CallStatus.ONGOING.name
-        )
+        val callLog = createCallLog(CallStatus.ONGOING)
         saveCallLog(callLog)
         viewModelScope.launch {
             incomingCallerSession.emit(null)
@@ -191,19 +164,14 @@ class CallViewModel @Inject constructor(
         viewModelScope.launch {
             incomingCallerSession.emit(null)
         }
-        val callLog = CallLog(
-            caller = userName!!,
-            target = target,
-            callType = if (_isAudioCall.value == "true") "audio" else "video",
-            startTime = System.currentTimeMillis(),
-            status = CallStatus.REJECTED.name
-        )
+        val callLog = createCallLog(CallStatus.REJECTED)
         saveCallLog(callLog)
         socketRepository.sendMessageToSocket(
             CallMessageModel(
                 "end_call", userName, target, CallStatus.REJECTED.name,null
             )
         )
+        setCallStatus(CallStatus.COMPLETED)
         Log.d("RTCC","rejectCall $incomingCallerSession")
     }
     fun handleMissedCall() {
@@ -211,9 +179,10 @@ class CallViewModel @Inject constructor(
         saveCallLog(callLog)
         socketRepository.sendMessageToSocket(
             CallMessageModel(
-                "end_call", userName, target, CallStatus.MISSED.name, null // Notify other party
+                "end_call", userName, target, CallStatus.MISSED.name, null
             )
         )
+        setCallStatus(CallStatus.COMPLETED)
     }
     private fun createCallLog(status: CallStatus): CallLog {
         return CallLog(
@@ -238,12 +207,9 @@ class CallViewModel @Inject constructor(
     }
 
     override fun onCleared() {
-        //onEndClicked()
         clearSurfaces()
         super.onCleared()
     }
-
-
 
     fun onEndClicked(status: CallStatus) {
         _callStatus.value = status
@@ -259,14 +225,7 @@ class CallViewModel @Inject constructor(
         viewModelScope.launch {
             incomingCallerSession.emit(null)
         }
-        val callLog = CallLog(
-            caller = userName!!,
-            target = target,
-            callType = if (_isAudioCall.value == "true") "audio" else "video",
-            startTime = System.currentTimeMillis(),
-            status = status.name
-        )
-        saveCallLog(callLog)
+        setCallStatus(CallStatus.COMPLETED)
         socketRepository.sendMessageToSocket(
             CallMessageModel(
                 "end_call", userName, target, status.name,null
@@ -309,7 +268,7 @@ class CallViewModel @Inject constructor(
     private fun updateCallEndTime(endTime: Long) {
         currentCallLogId?.let { id ->
             fireStore.collection(CALLLOG).document(id)
-                .update("endTime", endTime, "status", "completed")
+                .update("endTime", endTime, "status", CallStatus.COMPLETED)
                 .addOnSuccessListener {
                     Log.d("CallLog", "Document successfully updated!")
                 }
@@ -317,6 +276,19 @@ class CallViewModel @Inject constructor(
                     Log.w("CallLog", "Error updating document", e)
                 }
         }
+    }
+    fun fetchCallLogs() {
+        fireStore.collection(CALLLOG)
+            .get()
+            .addOnSuccessListener { documents ->
+                val logs = documents.map { document ->
+                    document.toObject(CallLog::class.java)
+                }
+                _callLogs.value = logs
+            }
+            .addOnFailureListener { e ->
+                Log.w("CallLog", "Error fetching documents", e)
+            }
     }
 
     override fun onNewMessage(message: CallMessageModel) {
@@ -373,7 +345,6 @@ class CallViewModel @Inject constructor(
                         else -> CallStatus.COMPLETED
                     }
                     onEndClicked(status)
-                    //navController.popBackStack(DestinationScreen.ChatList.route, false)
                     Log.d("RTCC", "call_ended $message")
                 }
             }

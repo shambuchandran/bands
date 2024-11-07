@@ -11,6 +11,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.MarqueeAnimationMode
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -32,15 +33,21 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -60,6 +67,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -109,9 +117,15 @@ fun CommonImage(
 
 }
 
+
 @Composable
-fun CommonTitleText(text: String, data: WeatherModel? = null) {
+fun CommonTitleText(text: String,
+                    data: WeatherModel? = null,
+                    showSearchBar: Boolean = false,
+                    searchQuery: String = "",
+                    onSearchQueryChange: (String) -> Unit = {}) {
     val expanded = remember { mutableStateOf(false) }
+    val ifSearchExpanded = remember { mutableStateOf(false) }
 
     Surface(
         modifier = Modifier
@@ -137,6 +151,33 @@ fun CommonTitleText(text: String, data: WeatherModel? = null) {
                     fontWeight = FontWeight.Bold,
                     fontSize = 36.sp,
                 )
+                if (showSearchBar) {
+                    if (ifSearchExpanded.value) {
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = onSearchQueryChange,
+                            modifier = Modifier
+                                .padding(1.dp)
+                                .clip(CircleShape)
+                                .height(46.dp)
+                                .border(1.dp, Color.Gray, CircleShape),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Color.Transparent,
+                                unfocusedBorderColor = Color.Gray,
+                            ),
+                            textStyle = TextStyle(fontSize = 14.sp),
+                            trailingIcon = {
+                                IconButton(onClick = { ifSearchExpanded.value = false }) {
+                                    Icon(imageVector = Icons.Default.Close, contentDescription = "Close Search")
+                                }
+                            }
+                        )
+                    } else {
+                        IconButton(onClick = { ifSearchExpanded.value = true }) {
+                            Icon(imageVector = Icons.Default.Search, contentDescription = "Open Search")
+                        }
+                    }
+                }
             }
             if (data!= null) {
                 IconButton(

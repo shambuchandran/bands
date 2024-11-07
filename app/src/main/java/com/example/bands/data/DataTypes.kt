@@ -1,5 +1,7 @@
 package com.example.bands.data
 
+import com.google.errorprone.annotations.Keep
+
 enum class Availability {
     ONLINE, OFFLINE, IN_CALL
 }
@@ -49,13 +51,15 @@ data class CallMessageModel(
     val data: Any? = null,
     val isAudioOnly: String? = "false"
 )
+
+@Keep
 data class CallLog(
-    val caller: String,
-    val target: String,
-    val callType: String,
-    val startTime: Long,
+    val caller: String = "",
+    val target: String = "",
+    val callType: String = "",
+    val startTime: Long = 0L,
     val endTime: Long? = null,
-    val status: String
+    val status: String = ""
 )
 
 data class IceCandidateModel(

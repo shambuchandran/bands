@@ -139,7 +139,7 @@ fun SingleChatScreen(
 
     BackHandler {
         if (callViewModel.isInCall.value) {
-            callViewModel.onEndClicked(CallStatus.NOTINCALL)
+            callViewModel.onEndClicked(CallStatus.COMPLETED)
         }
         navigateTo(navController, DestinationScreen.ChatList.route)
         viewModel.releaseMessages()

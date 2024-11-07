@@ -104,6 +104,7 @@ dependencies {
 
     implementation ("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.1")
     implementation("androidx.compose.material:material:1.6.0")
+    implementation ("androidx.compose.material:material-icons-extended:1.3.1")
 
     implementation(libs.jetpack.compose.country.code.picker.emoji)
 

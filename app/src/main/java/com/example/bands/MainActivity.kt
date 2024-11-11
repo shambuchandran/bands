@@ -163,7 +163,7 @@ class MainActivity : FragmentActivity() {
                     ProfileScreen(navController, viewModel)
                 }
                 composable(DestinationScreen.CallLogs.route) {
-                    CallLogsScreen(callViewModel)
+                    CallLogsScreen(callViewModel,navController)
                 }
                 composable(DestinationScreen.StatusList.route) {
                     StatusScreen(navController, viewModel, weatherViewModel)

@@ -32,14 +32,17 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.DropdownMenuItem
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -47,7 +50,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -69,8 +71,10 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import coil3.compose.AsyncImage
@@ -123,9 +127,13 @@ fun CommonTitleText(text: String,
                     data: WeatherModel? = null,
                     showSearchBar: Boolean = false,
                     searchQuery: String = "",
-                    onSearchQueryChange: (String) -> Unit = {}) {
+                    onSearchQueryChange: (String) -> Unit = {},
+                    showMenuIcon: Boolean = false,
+                    onDeleteConfirm: () -> Unit = {} ) {
     val expanded = remember { mutableStateOf(false) }
     val ifSearchExpanded = remember { mutableStateOf(false) }
+    val showDialog = remember { mutableStateOf(false) }
+    val showMenu = remember { mutableStateOf(false) }
 
     Surface(
         modifier = Modifier
@@ -178,6 +186,26 @@ fun CommonTitleText(text: String,
                         }
                     }
                 }
+                if (showMenuIcon) {
+                    Box {
+                        IconButton(onClick = { showMenu.value = true }) {
+                            Icon(imageVector = Icons.Default.MoreVert, contentDescription = "More Options")
+                        }
+                        DropdownMenu(
+                            expanded = showMenu.value,
+                            onDismissRequest = { showMenu.value = false }
+                        ) {
+                            DropdownMenuItem(
+                                onClick = {
+                                    showDialog.value = true
+                                    showMenu.value = false
+                                }
+                            ) {
+                                Text("Delete", color = Color.White)
+                            }
+                        }
+                    }
+                }
             }
             if (data!= null) {
                 IconButton(
@@ -195,6 +223,56 @@ fun CommonTitleText(text: String,
             }
             if (expanded.value && data != null) {
                 WeatherShowText(data)
+            }
+        }
+        if (showDialog.value) {
+            ConfirmationDialogForDeleteCallLogs(
+                onConfirm = {
+                    onDeleteConfirm()
+                    showDialog.value = false
+                },
+                onDismiss = { showDialog.value = false }
+            )
+        }
+    }
+}
+@Composable
+fun ConfirmationDialogForDeleteCallLogs(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = Color.White.copy(alpha = 0.5f),
+            tonalElevation = 12.dp,
+            shadowElevation = 6.dp,
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Delete all CallLogs?",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Button(onClick = onDismiss) {
+                        Text("Cancel")
+                    }
+                    Button(onClick = {
+                        onConfirm()
+                        onDismiss()
+                    }) {
+                        Text("Delete")
+                    }
+                }
             }
         }
     }

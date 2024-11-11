@@ -27,53 +27,64 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.toUpperCase
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import com.example.bands.data.CallLog
 import com.example.bands.di.CallStatus
 import com.example.bands.di.CallViewModel
+import com.example.bands.utils.CommonTitleText
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
 @Composable
-fun CallLogsScreen(viewModel: CallViewModel) {
+fun CallLogsScreen(viewModel: CallViewModel,navController:NavController) {
     LaunchedEffect(Unit) {
         viewModel.fetchCallLogs()
     }
     val callLogs by viewModel.callLogs.collectAsState()
-
-    LazyColumn(
-        modifier = Modifier.padding(horizontal = 4.dp)
-    ) {
-        items(callLogs) { callLog ->
-            CallLogItem(callLog) { isAudioCall ->
-                viewModel.startCall(callLog.target, if (isAudioCall) "true" else "false")
+    Column {
+        CommonTitleText(text = "Calls", showSearchBar = false, showMenuIcon = true, onDeleteConfirm ={
+            viewModel.deleteAllCallLogs()
+        } )
+        LazyColumn(
+            modifier = Modifier.padding(horizontal = 4.dp).weight(1f)
+        ) {
+            items(callLogs.sortedByDescending { it.endTime?:0L }) { callLog ->
+                CallLogItem(callLog) { isAudioCall ->
+                    viewModel.startCall(
+                        callLog.target,
+                        if (isAudioCall == "true") "true" else "false"
+                    )
+                }
             }
         }
+        BottomNavigationMenu(
+            selectedItem = BottomNavigationItem.CALLLOGS,
+            navController = navController
+        )
     }
 }
 
 @Composable
-fun CallLogItem(callLog: CallLog, onCallClick: (Boolean) -> Unit) {
+fun CallLogItem(callLog: CallLog, onCallClick: (String) -> Unit) {
     val formattedEndTime = callLog.endTime?.let { formatTime(it) }
-    //val callDuration = callLog.endTime?.let { formatDuration(callLog.startTime, it) }
 
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp)
-            .clickable { onCallClick(callLog.callType == "audio") }
-            //.padding(8.dp),
+            .padding(vertical =4.dp)
         ,elevation = 8.dp,
         shape = RoundedCornerShape(8.dp),
-        color = MaterialTheme.colorScheme.background
+        color = Color.Gray
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.secondaryContainer)
+                .background(Color.Gray)
                 .padding(8.dp)
         ) {
             Column(
@@ -82,35 +93,28 @@ fun CallLogItem(callLog: CallLog, onCallClick: (Boolean) -> Unit) {
                 Text(
                     //text = "${callLog.caller} -> ${callLog.target}",
                     text = callLog.target,
-                    fontSize = 14.sp,
+                    fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = Color.Black
                 )
                 formattedEndTime?.let {
                     Text(
                         text = it,
                         fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        color = Color.White
                     )
                 }
-//                callDuration?.let {
-//                    Text(
-//                        text = "Duration: $it",
-//                        fontSize = 14.sp,
-//                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-//                    )
-//                }
             }
 
             Spacer(modifier = Modifier.width(8.dp))
 
             Text(
-                text = callLog.status,
+                text = callLog.status.uppercase(Locale.ROOT),
                 fontSize = 12.sp,
-                color = when (callLog.status) {
+                color = when (callLog.status.uppercase(Locale.ROOT)) {
                     CallStatus.MISSED.name -> Color.Red
-                    CallStatus.REJECTED.name -> Color.Gray
-                    "completed" -> Color.Green
+                    CallStatus.REJECTED.name -> Color.Yellow
+                    "COMPLETED" -> Color.Green
                     else -> Color.White
                 },
                 modifier = Modifier.align(Alignment.CenterVertically)
@@ -120,22 +124,15 @@ fun CallLogItem(callLog: CallLog, onCallClick: (Boolean) -> Unit) {
                 imageVector = if (callLog.callType == "audio") Icons.Default.Phone else Icons.Default.VideoCall,
                 contentDescription = null,
                 tint = Color.White,
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier
+                    .size(38.dp)
+                    .clickable { onCallClick(if (callLog.callType == "audio") "true" else "false") }
             )
         }
     }
 }
-
 fun formatTime(timeInMillis: Long): String {
     val dateFormat = SimpleDateFormat("MM/dd/yyyy HH:mm", Locale.getDefault())
     return dateFormat.format(Date(timeInMillis))
 }
 
-//fun formatDuration(startTime: Long, endTime: Long): String {
-//    val duration = endTime - startTime
-//    val seconds = (duration / 1000) % 60
-//    val minutes = (duration / (1000 * 60)) % 60
-//    val hours = (duration / (1000 * 60 * 60)) % 24
-//
-//    return String.format("%02d:%02d:%02d", hours, minutes, seconds)
-//}

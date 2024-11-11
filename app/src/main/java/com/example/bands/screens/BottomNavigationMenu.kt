@@ -28,8 +28,8 @@ import com.example.bands.utils.navigateTo
 enum class BottomNavigationItem(val icon: Int, val navDestination: DestinationScreen) {
     CHATLIST(R.drawable.messages, DestinationScreen.ChatList),
     STATUSLIST(R.drawable.sparkles, DestinationScreen.StatusList),
+    CALLLOGS(R.drawable.baseline_startcall_24,DestinationScreen.CallLogs),
     PROFILE(R.drawable.user, DestinationScreen.Profile),
-    CALLLOGS(R.drawable.baseline_startcall_24,DestinationScreen.CallLogs)
 }
 
 @Composable

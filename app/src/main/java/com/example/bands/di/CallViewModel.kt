@@ -283,11 +283,34 @@ class CallViewModel @Inject constructor(
             .addOnSuccessListener { documents ->
                 val logs = documents.map { document ->
                     document.toObject(CallLog::class.java)
+                }.filter {
+                    it.target != userName
                 }
                 _callLogs.value = logs
             }
             .addOnFailureListener { e ->
                 Log.w("CallLog", "Error fetching documents", e)
+            }
+    }
+    fun deleteAllCallLogs() {
+        fireStore.collection(CALLLOG)
+            .get()
+            .addOnSuccessListener { documents ->
+                val batch = fireStore.batch()
+                for (document in documents) {
+                    batch.delete(document.reference)
+                }
+                batch.commit()
+                    .addOnSuccessListener {
+                        _callLogs.value = emptyList()
+                        Log.d("CallViewModel", "All call logs deleted successfully.")
+                    }
+                    .addOnFailureListener { e ->
+                        Log.e("CallViewModel", "Error deleting call logs", e)
+                    }
+            }
+            .addOnFailureListener { e ->
+                Log.e("CallViewModel", "Error fetching call logs for deletion", e)
             }
     }
 

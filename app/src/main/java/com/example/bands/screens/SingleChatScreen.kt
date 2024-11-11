@@ -1,7 +1,6 @@
 package com.example.bands.screens
 
 import android.net.Uri
-import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -9,6 +8,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,8 +22,10 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -33,6 +35,7 @@ import androidx.compose.material.DropdownMenuItem
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
@@ -47,7 +50,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
@@ -62,7 +64,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
@@ -70,8 +75,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
+import coil3.compose.AsyncImage
 import com.example.bands.DestinationScreen
 import com.example.bands.R
 import com.example.bands.data.Message
@@ -113,11 +120,21 @@ fun SingleChatScreen(
     //val chatMessages = viewModel.chatMessages
     val chatMessages by viewModel.chatMessages.collectAsState()
     val context = LocalContext.current
+    var isPreviewVisible by remember { mutableStateOf(false) }
+    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+    var imageCaption by rememberSaveable { mutableStateOf("") }
+//    val launcher =
+//        rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri: Uri? ->
+//            uri?.let {
+//                viewModel.sendImageMessage(chatId, it)
+//                Toast.makeText(context, "Image selected!", Toast.LENGTH_SHORT).show()
+//            }
+//        }
     val launcher =
         rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri: Uri? ->
             uri?.let {
-                viewModel.sendImageMessage(chatId, it)
-                Toast.makeText(context, "Image selected!", Toast.LENGTH_SHORT).show()
+                selectedImageUri = it
+                isPreviewVisible = true
             }
         }
     val onImageSelected: () -> Unit = {
@@ -146,85 +163,144 @@ fun SingleChatScreen(
     }
 
     val chatUserWeatherData: WeatherModel? = when (val result = chatUserCityNameResult.value) {
-        is NetworkResponse.Error -> {
-            null
-        }
-
-        NetworkResponse.Loading -> {
-            null
-        }
-
-        is NetworkResponse.Success -> {
-            result.data
-        }
-
-        null -> {
-            null
-        }
+        is NetworkResponse.Error -> null
+        NetworkResponse.Loading -> null
+        is NetworkResponse.Success -> result.data
+        null -> null
     }
-
-    Column(modifier = Modifier.fillMaxSize()) {
-        ChatHeader(
-            name = chatUser.name ?: "",
-            imageUrl = chatUser.imageUrl ?: "",
-            chatUserWeatherData,
-            onDeleteChat = {
-                viewModel.deleteAllMessagesInChat(chatId)
+    if (isPreviewVisible && selectedImageUri != null) {
+        ImagePreviewScreen(
+            imageUri = selectedImageUri!!,
+            caption = imageCaption,
+            onCaptionChange = { imageCaption = it },
+            onSendImage = {
+                viewModel.sendImageMessage(chatId, selectedImageUri!!, imageCaption)
+                imageCaption = ""
+                isPreviewVisible = false
+                selectedImageUri = null
             },
-            onBacKClicked = {
-                navController.popBackStack()
-                viewModel.releaseMessages()
-            },
-            onStartVideoCallButtonClicked = {
-                callViewModel.setCallStatus(CallStatus.ONGOING)
-                chatUser.let {
-                    navController.navigate(
-                        DestinationScreen.CallScreen.createRoute(
-                            it.name ?: "",
-                            it.phoneNumber ?: "",
-                            "false"
-                        )
-                    )
-                    //it.phoneNumber?.let { it1 -> callViewModel.startCall(it1) }
-                }
-            },
-            onStartAudioCallButtonClicked = {
-                callViewModel.setCallStatus(CallStatus.ONGOING)
-                chatUser.let {
-                    navController.navigate(
-                        DestinationScreen.CallScreen.createRoute(
-                            it.name ?: "",
-                            it.phoneNumber ?: "",
-                            "true"
-                        )
-                    )
-                }
-            },
-            showDeleteIcon = showDeleteIcon,
-            selectedMessageId = selectedMessageId,
-            onDeleteMessage = {
-                if (it != null) {
-                    viewModel.deleteMessage(chatId, it)
-                }
+            onCancel = {
+                isPreviewVisible = false
+                selectedImageUri = null
             }
         )
-        MessageBox(
+    } else {
+        Column(modifier = Modifier.fillMaxSize()) {
+            ChatHeader(
+                name = chatUser.name ?: "",
+                imageUrl = chatUser.imageUrl ?: "",
+                chatUserWeatherData,
+                onDeleteChat = {
+                    viewModel.deleteAllMessagesInChat(chatId)
+                },
+                onBacKClicked = {
+                    navController.popBackStack()
+                    viewModel.releaseMessages()
+                },
+                onStartVideoCallButtonClicked = {
+                    callViewModel.setCallStatus(CallStatus.ONGOING)
+                    chatUser.let {
+                        navController.navigate(
+                            DestinationScreen.CallScreen.createRoute(
+                                it.name ?: "",
+                                it.phoneNumber ?: "",
+                                "false"
+                            )
+                        )
+                        //it.phoneNumber?.let { it1 -> callViewModel.startCall(it1) }
+                    }
+                },
+                onStartAudioCallButtonClicked = {
+                    callViewModel.setCallStatus(CallStatus.ONGOING)
+                    chatUser.let {
+                        navController.navigate(
+                            DestinationScreen.CallScreen.createRoute(
+                                it.name ?: "",
+                                it.phoneNumber ?: "",
+                                "true"
+                            )
+                        )
+                    }
+                },
+                showDeleteIcon = showDeleteIcon,
+                selectedMessageId = selectedMessageId,
+                onDeleteMessage = {
+                    if (it != null) {
+                        viewModel.deleteMessage(chatId, it)
+                    }
+                }
+            )
+            MessageBox(
+                modifier = Modifier
+                    .weight(1f)
+                    .background(colorResource(id = R.color.chatBgColor)),
+                chatId,
+                chatMessages = chatMessages,
+                currentUserId = mainUser?.userId ?: "",
+                viewModel,
+                showDeleteIcon,
+                selectedMessageId
+            )
+            ReplyBox(
+                reply = reply,
+                onReplyChange = { reply = it },
+                onSendReply = onSendReply,
+                onSelectImage = onImageSelected
+            )
+        }
+    }
+}
+
+@Composable
+fun ImagePreviewScreen(
+    imageUri: Uri,
+    caption: String,
+    onCaptionChange: (String) -> Unit,
+    onSendImage: () -> Unit,
+    onCancel: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(colorResource(id = R.color.BgColor))
+            .padding(16.dp)
+    ) {
+        AsyncImage(
+            model = imageUri,
+            contentDescription = null,
             modifier = Modifier
                 .weight(1f)
-                .background(colorResource(id = R.color.chatBgColor)),
-            chatId,
-            chatMessages = chatMessages,
-            currentUserId = mainUser?.userId ?: "",
-            viewModel,
-            showDeleteIcon,
-            selectedMessageId
+                //.fillMaxSize()
+                //.height(300.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color.Gray)
         )
-        ReplyBox(
-            reply = reply,
-            onReplyChange = { reply = it },
-            onSendReply = onSendReply,
-            onSelectImage = onImageSelected
+        Spacer(modifier = Modifier.height(8.dp))
+
+        TextField(
+            value = caption,
+            onValueChange = onCaptionChange,
+            placeholder = { Text("say something...") },
+            modifier = Modifier.fillMaxWidth(),
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = Color(0xFFD1C7B9),
+                unfocusedContainerColor = Color(0xFFF6F0E7)
+            )
         )
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Button(onClick = onCancel) {
+                Text("Cancel")
+            }
+            Button(onClick = onSendImage) {
+                Text("Send")
+            }
+        }
     }
 }
 
@@ -296,6 +372,8 @@ fun MessageBox(
     showDeleteIcon: MutableState<Boolean>,
     selectedMessageId: MutableState<String?>,
 ) {
+    var isImagePreviewVisible by remember { mutableStateOf(false) }
+    var selectedImageUrl by remember { mutableStateOf<String?>(null) }
     LazyColumn(
         modifier = modifier,
         reverseLayout = true
@@ -307,6 +385,7 @@ fun MessageBox(
             val color = if (message.sendBy == currentUserId) Color(color1) else Color(color2)
             val formattedTime = formatTimestamp(message.timeStamp)
             var showEmojiPicker by remember { mutableStateOf(false) }
+            val screenWidth = LocalConfiguration.current.screenWidthDp.dp
 
             Column(
                 modifier = Modifier
@@ -341,22 +420,46 @@ fun MessageBox(
                         .clip(RoundedCornerShape(16.dp))
                         .background(color)
                         .padding(12.dp)
+                        .wrapContentWidth()
                 ) {
                     if (message.imageUrl != null) {
-                        Image(
-                            painter = rememberAsyncImagePainter(model = message.imageUrl),
-                            contentDescription = null,
-                            modifier = Modifier
-                                .height(200.dp)
-                                .wrapContentSize()
-                                .clip(RoundedCornerShape(8.dp))
-                        )
+                        Column(Modifier.align(alignment)) {
+                            Image(
+                                painter = rememberAsyncImagePainter(model = message.imageUrl),
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .height(200.dp)
+                                    .widthIn(max = screenWidth / 2)
+                                    .wrapContentSize()
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable {
+                                        selectedImageUrl = message.imageUrl
+                                        isImagePreviewVisible = true
+                                    }
+                            )
+                            if (!message.caption.isNullOrEmpty()) {
+                                Text(
+                                    text = message.caption,
+                                    color = Color.White,
+                                    fontSize = 16.sp,
+                                    modifier = Modifier
+                                        .padding(4.dp)
+                                        .widthIn(max = screenWidth / 2)
+                                        .wrapContentWidth(),
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
                     }
                     Text(
                         text = message.message ?: "",
                         color = Color.White,
                         fontSize = 20.sp,
-                        modifier = Modifier.padding(horizontal = 8.dp),
+                        modifier = Modifier
+                            .padding(horizontal = 8.dp)
+                            .widthIn(max = screenWidth / 2)
+                            .align(alignment)
+                            .wrapContentWidth(),
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -391,6 +494,67 @@ fun MessageBox(
                 )
             }
         }
+    }
+    if (isImagePreviewVisible && selectedImageUrl != null) {
+        Dialog(
+            onDismissRequest = { isImagePreviewVisible = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black)
+            ) {
+                ZoomableImage(imageUrl = selectedImageUrl!!)
+                IconButton(
+                    onClick = { isImagePreviewVisible = false },
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(16.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Close",
+                        tint = Color.White
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ZoomableImage(imageUrl: String) {
+    val painter = rememberAsyncImagePainter(model = imageUrl)
+    var scale by remember { mutableStateOf(1f) }
+    var offsetX by remember { mutableStateOf(0f) }
+    var offsetY by remember { mutableStateOf(0f) }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .clip(RoundedCornerShape(8.dp))
+            .pointerInput(Unit) {
+                detectTransformGestures() { _, pan, zoom, _ ->
+                    scale *= zoom
+                    offsetX += pan.x
+                    offsetY += pan.y
+                }
+            }
+    ) {
+        Image(
+            painter = painter,
+            contentDescription = null,
+            contentScale = ContentScale.Fit,
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer(
+                    scaleX = maxOf(1f, minOf(3f, scale)),
+                    scaleY = maxOf(1f, minOf(3f, scale)),
+                    translationX = offsetX,
+                    translationY = offsetY
+                )
+        )
     }
 }
 

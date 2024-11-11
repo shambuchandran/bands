@@ -464,14 +464,14 @@ class BandsViewModel @Inject constructor(
             null
         }
     }
-    fun sendImageMessage(chatId: String, imageUri: Uri) {
+    fun sendImageMessage(chatId: String, imageUri: Uri,caption:String? = null) {
         viewModelScope.launch {
             try {
                 val imageUrl = uploadImage(imageUri)
                 if (imageUrl != null) {
                     val messageId = UUID.randomUUID().toString()
                     val timeStamp = Calendar.getInstance().time.toString()
-                    val imageMessage = Message(id = messageId, sendBy = userData.value?.userId, imageUrl = imageUrl, timeStamp = timeStamp)
+                    val imageMessage = Message(id = messageId, sendBy = userData.value?.userId, imageUrl = imageUrl, timeStamp = timeStamp, caption = caption)
                     _chatMessages.value += imageMessage
                     db.collection(CHATS).document(chatId).collection(MESSAGE).document(messageId).set(imageMessage)
                         .addOnCompleteListener { task ->
@@ -481,6 +481,7 @@ class BandsViewModel @Inject constructor(
                         }
                 } else {
                     Log.e("sendImageMessage", "Failed to upload image")
+                    return@launch
                 }
             } catch (e: Exception) {
                 Log.e("sendImageMessage", "Error sending image message: ${e.message}")
@@ -491,14 +492,30 @@ class BandsViewModel @Inject constructor(
     fun deleteMessage(chatId: String, messageId: String) {
         viewModelScope.launch {
             try {
-                db.collection(CHATS).document(chatId).collection(MESSAGE).document(messageId).delete()
-                    .addOnSuccessListener {
-                        _chatMessages.value = _chatMessages.value.filter { it.id != messageId }
-                        Toast.makeText(context, "Message deleted", Toast.LENGTH_SHORT).show()
+                db.collection(CHATS).document(chatId).collection(MESSAGE).document(messageId).get()
+                    .addOnSuccessListener { document ->
+                        if (document.exists()) {
+                            val message = document.toObject(Message::class.java)
+                            message?.imageUrl?.let { imageUrl ->
+                                deleteImageFromFirebaseStorage(imageUrl)
+                            }
+                            db.collection(CHATS).document(chatId).collection(MESSAGE).document(messageId).delete()
+                                .addOnSuccessListener {
+                                    _chatMessages.value = _chatMessages.value.filter { it.id != messageId }
+                                    Toast.makeText(context, "Message deleted", Toast.LENGTH_SHORT).show()
+                                }
+                                .addOnFailureListener { e ->
+                                    Log.e("deleteMessage", "Error deleting message: ${e.message}")
+                                    Toast.makeText(context, "Failed to delete message", Toast.LENGTH_SHORT).show()
+                                }
+                        } else {
+                            Log.e("deleteMessage", "Message not found")
+                            Toast.makeText(context, "Message not found", Toast.LENGTH_SHORT).show()
+                        }
                     }
                     .addOnFailureListener { e ->
-                        Log.e("deleteMessage", "Error deleting message: ${e.message}")
-                        Toast.makeText(context, "Failed to delete message", Toast.LENGTH_SHORT).show()
+                        Log.e("deleteMessage", "Error retrieving message: ${e.message}")
+                        Toast.makeText(context, "Failed to retrieve message", Toast.LENGTH_SHORT).show()
                     }
             } catch (e: Exception) {
                 Log.e("deleteMessage", "Error deleting message: ${e.message}")
@@ -667,7 +684,7 @@ class BandsViewModel @Inject constructor(
                                         for (i in statusesToDelete.indices) {
                                             val statusRef = statusesToDelete[i]
                                             if (i < imagesToDelete.size) {
-                                                deleteImageFromFirebase(imagesToDelete[i])
+                                                deleteImageFromFirebaseStorage(imagesToDelete[i])
                                             }
                                             statusRef.delete()
                                                 .addOnSuccessListener {
@@ -690,7 +707,7 @@ class BandsViewModel @Inject constructor(
                 }
             }
     }
-    private fun deleteImageFromFirebase(url: String) {
+    private fun deleteImageFromFirebaseStorage(url: String) {
         val imageRef: StorageReference = storage.getReferenceFromUrl(url)
         imageRef.delete()
             .addOnSuccessListener {
@@ -723,7 +740,7 @@ class BandsViewModel @Inject constructor(
                     statusCollection.document(doc.id).delete().addOnSuccessListener {
                         Log.d("BandsViewModel", "Status successfully deleted!")
                         selectedStatus.imageUrl?.let {
-                            deleteImageFromFirebase(it)
+                            deleteImageFromFirebaseStorage(it)
                         }
                     }.addOnFailureListener {
                         handleException(it)

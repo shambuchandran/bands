@@ -41,7 +41,7 @@ class FirebaseMessageService : FirebaseMessagingService(){
         val notification = NotificationCompat.Builder(this,"messages")
             .setContentTitle(title ?: "No Title")
             .setContentText(message ?: "No Message")
-            .setSmallIcon(R.drawable.messages)
+            .setSmallIcon(R.mipmap.ic_launcher_round)
             .setAutoCancel(true)
             .build()
         notificationManager.notify(notificationId,notification)

@@ -106,7 +106,6 @@ dependencies {
     implementation("androidx.compose.material:material:1.6.0")
     implementation ("androidx.compose.material:material-icons-extended:1.3.1")
 
-
     implementation(libs.jetpack.compose.country.code.picker.emoji)
 
     implementation ("com.google.auth:google-auth-library-oauth2-http:1.19.0")

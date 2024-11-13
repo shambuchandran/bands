@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.DropdownMenuItem
@@ -42,6 +43,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.rounded.AddCircle
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -59,6 +61,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -106,6 +109,7 @@ fun SingleChatScreen(
 ) {
     val chatUserCityNameResult = weatherViewModel.chatUserCityName.observeAsState()
     var reply by rememberSaveable { mutableStateOf("") }
+    val incomingCallState = callViewModel.incomingCallerSession.collectAsState(null)
 
     val onSendReply = {
         if (reply.isNotBlank()) {
@@ -119,17 +123,11 @@ fun SingleChatScreen(
         if (mainUser?.userId == currentChat.user1.userId) currentChat.user2 else currentChat.user1
     //val chatMessages = viewModel.chatMessages
     val chatMessages by viewModel.chatMessages.collectAsState()
+
     val context = LocalContext.current
     var isPreviewVisible by remember { mutableStateOf(false) }
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     var imageCaption by rememberSaveable { mutableStateOf("") }
-//    val launcher =
-//        rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri: Uri? ->
-//            uri?.let {
-//                viewModel.sendImageMessage(chatId, it)
-//                Toast.makeText(context, "Image selected!", Toast.LENGTH_SHORT).show()
-//            }
-//        }
     val launcher =
         rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri: Uri? ->
             uri?.let {
@@ -156,7 +154,7 @@ fun SingleChatScreen(
 
     BackHandler {
         if (callViewModel.isInCall.value) {
-            callViewModel.onEndClicked(CallStatus.COMPLETED)
+            callViewModel.onEndClicked(CallStatus.COMPLETED, incomingCallState.value?.isAudioOnly)
         }
         navigateTo(navController, DestinationScreen.ChatList.route)
         viewModel.releaseMessages()
@@ -374,6 +372,7 @@ fun MessageBox(
 ) {
     var isImagePreviewVisible by remember { mutableStateOf(false) }
     var selectedImageUrl by remember { mutableStateOf<String?>(null) }
+
     LazyColumn(
         modifier = modifier,
         reverseLayout = true
@@ -492,6 +491,17 @@ fun MessageBox(
                     color = Color.LightGray,
                     modifier = Modifier.align(alignment)
                 )
+            }
+        }
+        if (viewModel.inProgressChatMessages.value) {
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .wrapContentSize(Alignment.Center)
+                ) {
+                    CircularProgressIndicator()
+                }
             }
         }
     }

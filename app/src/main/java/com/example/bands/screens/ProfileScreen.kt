@@ -1,5 +1,6 @@
 package com.example.bands.screens
 
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -36,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -52,6 +54,7 @@ import com.example.bands.utils.navigateTo
 
 @Composable
 fun ProfileScreen(navController: NavController, viewModel: BandsViewModel) {
+    val context = LocalContext.current
     val inProgress = viewModel.inProgress.value
     if (inProgress) {
         CommonProgressBar()
@@ -76,9 +79,9 @@ fun ProfileScreen(navController: NavController, viewModel: BandsViewModel) {
                 onNameChange = { name = it },
                 onPhoneNumberChange = { phoneNumber = it },
                 onSave = { viewModel.createOrUpdateProfile(name = name,phoneNumber = phoneNumber)
+                    Toast.makeText(context,"Profile updated",Toast.LENGTH_SHORT).show()
                 },
                 onLogout = {viewModel.logout()
-                    // navigateTo(navController,DestinationScreen.Login.route)
                     navigateTo(navController,DestinationScreen.PhoneAuth.route)
                 },
                 onBack = { navigateTo(navController,DestinationScreen.ChatList.route) }

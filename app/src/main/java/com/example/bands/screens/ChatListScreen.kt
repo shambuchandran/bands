@@ -262,7 +262,7 @@ fun ChatListScreen(
                                 title = "Delete Chat",
                                 message = "Are you sure you want to delete this chat?",
                                 onConfirm = {
-                                    //viewModel.deleteChatById(chatIdToDelete)
+                                    viewModel.deleteChatById(chatIdToDelete)
                                     Toast.makeText(context,"deleted",Toast.LENGTH_SHORT).show()
                                     showDialogChatDelete.value = false
                                 },

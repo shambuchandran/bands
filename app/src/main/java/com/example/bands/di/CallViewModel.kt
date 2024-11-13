@@ -7,8 +7,6 @@ import android.widget.Toast
 import androidx.core.view.isVisible
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.navigation.NavController
-import com.example.bands.DestinationScreen
 import com.example.bands.data.CALLLOG
 import com.example.bands.data.CallLog
 import com.example.bands.data.IceCandidateModel
@@ -25,7 +23,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import org.webrtc.IceCandidate
 import org.webrtc.MediaStream
@@ -64,7 +61,7 @@ class CallViewModel @Inject constructor(
     }
 
     var rtcClient: RTCClient? = null
-    private var userName: String? = ""
+    var userName: String? = ""
     private var target: String = ""
     private val gson = Gson()
     val incomingCallerSession: MutableStateFlow<CallMessageModel?> = MutableStateFlow(null)
@@ -159,30 +156,30 @@ class CallViewModel @Inject constructor(
         }
     }
 
-    fun rejectCall() {
+    fun rejectCall(audioOnly: String?) {
         _isInCall.value=false
+        val callLog = createCallLog(CallStatus.REJECTED)
+        saveCallLog(callLog)
+        setCallStatus(CallStatus.REJECTED)
         viewModelScope.launch {
             incomingCallerSession.emit(null)
         }
-        val callLog = createCallLog(CallStatus.REJECTED)
-        saveCallLog(callLog)
         socketRepository.sendMessageToSocket(
             CallMessageModel(
-                "end_call", userName, target, CallStatus.REJECTED.name,null
+                "end_call", userName, target, CallStatus.REJECTED.name,audioOnly
             )
         )
-        setCallStatus(CallStatus.COMPLETED)
         Log.d("RTCC","rejectCall $incomingCallerSession")
     }
-    fun handleMissedCall() {
+    fun handleMissedCall(audioOnly: String?) {
         val callLog = createCallLog(CallStatus.MISSED)
         saveCallLog(callLog)
+        setCallStatus(CallStatus.MISSED)
         socketRepository.sendMessageToSocket(
             CallMessageModel(
-                "end_call", userName, target, CallStatus.MISSED.name, null
+                "end_call", userName, target, CallStatus.MISSED.name, audioOnly
             )
         )
-        setCallStatus(CallStatus.COMPLETED)
     }
     private fun createCallLog(status: CallStatus): CallLog {
         return CallLog(
@@ -211,13 +208,18 @@ class CallViewModel @Inject constructor(
         super.onCleared()
     }
 
-    fun onEndClicked(status: CallStatus) {
-        _callStatus.value = status
+    fun onEndClicked(status: CallStatus, audioOnly: String? ="false") {
+        val endTime = System.currentTimeMillis()
+        updateCallEndTime(endTime,status)
+        setCallStatus(status)
+        socketRepository.sendMessageToSocket(
+            CallMessageModel(
+                "end_call", userName, target,status.name,audioOnly
+            )
+        )
         rtcClient?.endCall()
         stopVideoTrack()
         clearSurfaces()
-        val endTime = System.currentTimeMillis()
-        updateCallEndTime(endTime)
         rtcClient = null
         _isInCall.value = false
         isInitialized = false
@@ -225,12 +227,6 @@ class CallViewModel @Inject constructor(
         viewModelScope.launch {
             incomingCallerSession.emit(null)
         }
-        setCallStatus(CallStatus.COMPLETED)
-        socketRepository.sendMessageToSocket(
-            CallMessageModel(
-                "end_call", userName, target, status.name,null
-            )
-        )
         socketRepository.closeSocket()
         Log.d("RTCC","onEndClicked ${incomingCallerSession.value}")
     }
@@ -265,17 +261,19 @@ class CallViewModel @Inject constructor(
             }
     }
 
-    private fun updateCallEndTime(endTime: Long) {
+    private fun updateCallEndTime(endTime: Long, status: CallStatus) {
         currentCallLogId?.let { id ->
             fireStore.collection(CALLLOG).document(id)
-                .update("endTime", endTime, "status", CallStatus.COMPLETED)
+                .update("endTime",endTime , "status",status)
                 .addOnSuccessListener {
                     Log.d("CallLog", "Document successfully updated!")
+                    fetchCallLogs()
                 }
                 .addOnFailureListener { e ->
                     Log.w("CallLog", "Error updating document", e)
                 }
         }
+        currentCallLogId=null
     }
     fun fetchCallLogs() {
         fireStore.collection(CALLLOG)
@@ -283,8 +281,6 @@ class CallViewModel @Inject constructor(
             .addOnSuccessListener { documents ->
                 val logs = documents.map { document ->
                     document.toObject(CallLog::class.java)
-                }.filter {
-                    it.target != userName
                 }
                 _callLogs.value = logs
             }
@@ -294,6 +290,7 @@ class CallViewModel @Inject constructor(
     }
     fun deleteAllCallLogs() {
         fireStore.collection(CALLLOG)
+            .whereEqualTo("caller", userName)
             .get()
             .addOnSuccessListener { documents ->
                 val batch = fireStore.batch()
@@ -302,7 +299,8 @@ class CallViewModel @Inject constructor(
                 }
                 batch.commit()
                     .addOnSuccessListener {
-                        _callLogs.value = emptyList()
+                        fetchCallLogs()
+                        //_callLogs.value =  _callLogs.value.filter { it.target != userName }
                         Log.d("CallViewModel", "All call logs deleted successfully.")
                     }
                     .addOnFailureListener { e ->
@@ -362,13 +360,17 @@ class CallViewModel @Inject constructor(
                     }
                 }
                 "call_ended" ->{
+                    Log.d("RTCC","call_ended ${message.data}")
                     val status = when (message.data) {
-                        "missed" -> CallStatus.MISSED
-                        "rejected" -> CallStatus.REJECTED
-                        else -> CallStatus.COMPLETED
+                        "MISSED" -> CallStatus.MISSED
+                        "REJECTED" -> CallStatus.REJECTED
+                        "COMPLETED" -> CallStatus.COMPLETED
+                        else -> {null}
                     }
-                    onEndClicked(status)
-                    Log.d("RTCC", "call_ended $message")
+                    Log.d("RTCC","call_ended status $status")
+                    if (status != null) {
+                        onEndClicked(status, message.isAudioOnly)
+                    }
                 }
             }
         }

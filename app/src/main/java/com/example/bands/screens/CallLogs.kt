@@ -1,5 +1,6 @@
 package com.example.bands.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -14,10 +15,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Surface
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.VideoCall
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -26,8 +28,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.toUpperCase
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -41,6 +44,7 @@ import java.util.Locale
 
 @Composable
 fun CallLogsScreen(viewModel: CallViewModel,navController:NavController) {
+    val context = LocalContext.current
     LaunchedEffect(Unit) {
         viewModel.fetchCallLogs()
     }
@@ -52,12 +56,10 @@ fun CallLogsScreen(viewModel: CallViewModel,navController:NavController) {
         LazyColumn(
             modifier = Modifier.padding(horizontal = 4.dp).weight(1f)
         ) {
-            items(callLogs.sortedByDescending { it.endTime?:0L }) { callLog ->
-                CallLogItem(callLog) { isAudioCall ->
-                    viewModel.startCall(
-                        callLog.target,
-                        if (isAudioCall == "true") "true" else "false"
-                    )
+            items(callLogs.sortedByDescending { it.endTime?:it.startTime}) { callLog ->
+                CallLogItem(callLog,viewModel) { isAudioCall ->
+                    //if (isAudioCall == "true") "true" else "false"
+                    Toast.makeText(context,"This feature is upcoming",Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -69,8 +71,16 @@ fun CallLogsScreen(viewModel: CallViewModel,navController:NavController) {
 }
 
 @Composable
-fun CallLogItem(callLog: CallLog, onCallClick: (String) -> Unit) {
-    val formattedEndTime = callLog.endTime?.let { formatTime(it) }
+fun CallLogItem(callLog: CallLog,viewModel: CallViewModel, onCallClick: (String) -> Unit) {
+    val formattedEndTime = formatTime(callLog.endTime ?: callLog.startTime)
+    val isIncomingCall = callLog.caller != viewModel.userName
+    val arrowIcon = if (isIncomingCall) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward
+    val arrowColor = when (callLog.status.uppercase(Locale.ROOT)) {
+        CallStatus.MISSED.name -> Color.Red
+        CallStatus.REJECTED.name -> Color.Yellow
+        "COMPLETED" -> Color.Green
+        else -> Color.White
+    }
 
     Surface(
         modifier = Modifier
@@ -87,12 +97,22 @@ fun CallLogItem(callLog: CallLog, onCallClick: (String) -> Unit) {
                 .background(Color.Gray)
                 .padding(8.dp)
         ) {
+            Icon(
+                imageVector = arrowIcon,
+                contentDescription = null,
+                tint = arrowColor,
+                modifier = Modifier
+                    .size(24.dp)
+                    .align(Alignment.CenterVertically)
+                    .padding(end = 4.dp)
+                    .graphicsLayer(rotationZ = -35f)
+            )
             Column(
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
                     //text = "${callLog.caller} -> ${callLog.target}",
-                    text = callLog.target,
+                    text = if (isIncomingCall) callLog.caller else callLog.target,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.Black
@@ -105,9 +125,7 @@ fun CallLogItem(callLog: CallLog, onCallClick: (String) -> Unit) {
                     )
                 }
             }
-
             Spacer(modifier = Modifier.width(8.dp))
-
             Text(
                 text = callLog.status.uppercase(Locale.ROOT),
                 fontSize = 12.sp,
@@ -132,7 +150,7 @@ fun CallLogItem(callLog: CallLog, onCallClick: (String) -> Unit) {
     }
 }
 fun formatTime(timeInMillis: Long): String {
-    val dateFormat = SimpleDateFormat("MM/dd/yyyy HH:mm", Locale.getDefault())
+    val dateFormat = SimpleDateFormat("MM/dd/yy hh:mm a", Locale.getDefault())
     return dateFormat.format(Date(timeInMillis))
 }
 

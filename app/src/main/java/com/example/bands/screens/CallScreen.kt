@@ -1,7 +1,6 @@
 package com.example.bands.screens
 
 import android.annotation.SuppressLint
-import android.transition.Visibility
 import android.util.Log
 import android.widget.FrameLayout
 import androidx.activity.compose.BackHandler
@@ -16,16 +15,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -34,6 +28,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
@@ -51,12 +46,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.navigation.NavController
-import androidx.navigation.NavHostController
 import com.example.bands.DestinationScreen
 import com.example.bands.R
+import com.example.bands.data.CallMessageModel
 import com.example.bands.di.CallStatus
 import com.example.bands.di.CallViewModel
-import com.example.bands.utils.navigateTo
 import kotlinx.coroutines.delay
 import org.webrtc.SurfaceViewRenderer
 
@@ -70,6 +64,7 @@ fun CallScreen(name:String,phoneNumber: String?,isAudioCall:String,callViewModel
     val remoteSurfaceViewRenderer = remember { SurfaceViewRenderer(context)}
     val isCallAcceptedPending by callViewModel.isCallAcceptedPending.collectAsState()
     val callStatus by callViewModel.callStatus.collectAsState()
+    val incomingCallState = callViewModel.incomingCallerSession.collectAsState(null)
 
         LaunchedEffect(Unit) {
             callViewModel.setRemoteSurface(remoteSurfaceViewRenderer)
@@ -90,7 +85,6 @@ fun CallScreen(name:String,phoneNumber: String?,isAudioCall:String,callViewModel
 
     DisposableEffect(Unit) {
         onDispose {
-            callViewModel.onEndClicked(CallStatus.COMPLETED)
             callViewModel.stopVideoTrack()
             callViewModel.rtcClient = null
             localSurfaceViewRenderer.release()
@@ -117,7 +111,7 @@ fun CallScreen(name:String,phoneNumber: String?,isAudioCall:String,callViewModel
     }
     BackHandler {
         if (callViewModel.isInCall.value) {
-            callViewModel.onEndClicked(CallStatus.NOTINCALL)
+            callViewModel.onEndClicked(CallStatus.COMPLETED, incomingCallState.value?.isAudioOnly)
             callViewModel.rtcClient = null
         }
         val currentRoute = navController.currentBackStackEntry?.destination?.route
@@ -151,13 +145,18 @@ fun CallScreen(name:String,phoneNumber: String?,isAudioCall:String,callViewModel
     }
     //MainVideoCallUI(callViewModel,navController,localSurfaceViewRenderer,remoteSurfaceViewRenderer)
     if (isAudioCall =="true") {
-        AudioCallScreen(callViewModel,name,navController)
+        AudioCallScreen(callViewModel,name,navController,incomingCallState)
     } else {
-        MainVideoCallUI(callViewModel,navController,localSurfaceViewRenderer,remoteSurfaceViewRenderer)
+        MainVideoCallUI(callViewModel,navController,localSurfaceViewRenderer,remoteSurfaceViewRenderer,incomingCallState)
     }
 }
 @Composable
-fun AudioCallScreen(callViewModel: CallViewModel, receiverName: String,navController: NavController) {
+fun AudioCallScreen(
+    callViewModel: CallViewModel,
+    receiverName: String,
+    navController: NavController,
+    incomingCallState: State<CallMessageModel?>
+) {
     var callDuration by remember { mutableLongStateOf(0L) }
     val isCallActive =false
 
@@ -213,7 +212,10 @@ fun AudioCallScreen(callViewModel: CallViewModel, receiverName: String,navContro
                     .fillMaxWidth(),
                 onAudioButtonClicked = callViewModel::audioButtonClicked,
                 onCameraButtonClicked = {},
-                onEndCallClicked = {callViewModel.onEndClicked(CallStatus.COMPLETED)
+                onEndCallClicked = {callViewModel.onEndClicked(
+                    CallStatus.COMPLETED,
+                    incomingCallState.value?.isAudioOnly
+                )
                     navController.popBackStack()
                     },
                 onSwitchCameraClicked = {},
@@ -324,13 +326,19 @@ fun ControlButtonsLayout(
 }
 
 @Composable
-fun MainVideoCallUI(callViewModel: CallViewModel,navController: NavController,localViewRenderer: SurfaceViewRenderer,remoteViewRenderer: SurfaceViewRenderer) {
+fun MainVideoCallUI(
+    callViewModel: CallViewModel,
+    navController: NavController,
+    localViewRenderer: SurfaceViewRenderer,
+    remoteViewRenderer: SurfaceViewRenderer,
+    incomingCallState: State<CallMessageModel?>
+) {
 //    var isCallVisible by remember { mutableStateOf(true) }
     VideoCallScreen(
         //isVisible = isCallVisible,
         callViewModel,
         onEndCall = {
-            callViewModel.onEndClicked(CallStatus.COMPLETED)
+            callViewModel.onEndClicked(CallStatus.COMPLETED, incomingCallState.value?.isAudioOnly)
             navController.popBackStack()
             //isCallVisible = false
         },

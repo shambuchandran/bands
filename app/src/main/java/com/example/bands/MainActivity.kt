@@ -4,7 +4,6 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.os.Bundle
 import android.util.Log
-import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -25,7 +24,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -61,10 +59,7 @@ import com.example.bands.utils.MyAppTheme
 import com.example.bands.utils.RingtonePlayer
 import com.permissionx.guolindev.PermissionX
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.serialization.DeserializationStrategy
 import kotlinx.serialization.Serializable
 
 sealed class DestinationScreen(var route: String) {
@@ -203,8 +198,7 @@ class MainActivity : FragmentActivity() {
                         delay(60000)
                         if (!isInCall.value){
                             ringtonePlayer.stopRingtone()
-                            callViewModel.handleMissedCall()
-                            callViewModel.rejectCall()
+                            callViewModel.handleMissedCall(incomingCallState.value?.isAudioOnly)
                         }
                 }
 
@@ -221,7 +215,7 @@ class MainActivity : FragmentActivity() {
                     },
                     onRejectPressed = {
                         ringtonePlayer.stopRingtone()
-                        callViewModel.rejectCall()
+                        callViewModel.rejectCall(incomingCallState.value?.isAudioOnly)
                         navController.navigate(DestinationScreen.ChatList.route)
                     }
                 )

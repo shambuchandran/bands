@@ -34,9 +34,11 @@ import com.google.firebase.auth.PhoneAuthCredential
 import com.google.firebase.auth.PhoneAuthOptions
 import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.firestore.DocumentReference
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.Filter
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.toObject
 import com.google.firebase.firestore.toObjects
@@ -78,6 +80,7 @@ class BandsViewModel @Inject constructor(
     private val _chatMessages = MutableStateFlow<List<Message>>(emptyList())
     val chatMessages: StateFlow<List<Message>> = _chatMessages.asStateFlow()
     var inProgressChatMessages = mutableStateOf(false)
+    var lastVisibleMessage: DocumentSnapshot? = null
     var currentChatListener: ListenerRegistration? = null
     var showStickyHeader by mutableStateOf(false)
 
@@ -523,82 +526,114 @@ class BandsViewModel @Inject constructor(
             }
         }
     }
-
-    fun loadMessages(chatId: String) {
-        inProgressChatMessages.value = true
-        currentChatListener = db.collection(CHATS).document(chatId).collection(MESSAGE)
-            .addSnapshotListener { value, error ->
-                inProgressChatMessages.value = false
-                if (error != null) {
-                    handleException(error)
-                }
-                if (value != null) {
-                    _chatMessages.value = value.documents.mapNotNull {
-                        it.toObject<Message>()
-                    }.sortedBy { it.timeStamp }
-
-                }
+//    fun loadMessages(chatId: String, limit: Long = 50) {
+//        inProgressChatMessages.value = true
+//        currentChatListener?.remove()
+//        var query = db.collection(CHATS).document(chatId).collection(MESSAGE)
+//            .orderBy("timeStamp", Query.Direction.DESCENDING)
+//            .limit(limit)
+//        lastVisibleMessage?.let {
+//            query = query.startAfter(it)
+//        }
+//        query.get().addOnSuccessListener { snapshot ->
+//            inProgressChatMessages.value = false
+//
+//            if (!snapshot.isEmpty) {
+//                val messages = snapshot.documents.mapNotNull {
+//                    it.toObject<Message>()
+//                }.sortedBy { it.timeStamp }
+//                _chatMessages.value = messages
+//                lastVisibleMessage = snapshot.documents.last()
+//            }
+//        }.addOnFailureListener { error ->
+//            inProgressChatMessages.value = false
+//            handleException(error)
+//        }
+//        subscribeForNotification(chatId)
+//    }
+fun loadMessages(chatId: String) {
+    inProgressChatMessages.value = true
+    currentChatListener = db.collection(CHATS).document(chatId).collection(MESSAGE)
+        .addSnapshotListener { value, error ->
+            inProgressChatMessages.value = false
+            if (error != null) {
+                handleException(error)
             }
-        subscribeForNotification(chatId)
-    }
+            if (value != null) {
+                _chatMessages.value = value.documents.mapNotNull {
+                    it.toObject<Message>()
+                }.sortedBy { it.timeStamp }
+            }
+        }
+    subscribeForNotification(chatId)
+}
+
     fun subscribeForNotification(chatId:String){
         FirebaseMessaging.getInstance().subscribeToTopic("chatGroup_$chatId").addOnCompleteListener {
             if (it.isSuccessful){
-                Log.d("viewmodel"," success chatGroup_$chatId")
+                Log.d("Notification"," success chatGroup_$chatId")
             }else{
-                Log.d("viewmodel"," failed chatGroup_$chatId")
+                Log.d("Notification"," failed chatGroup_$chatId")
             }
         }
     }
      fun postNotificationToUsers(chatId: String,senderId:String,message: String){
          if (senderId != userData.value?.userId) {
-             Log.d("postNotificationToUsers", "Skipping notification for the sender")
+             Log.d("Notification", "Skipping notification for the sender")
              return
          }
-         val fcmUrl = "https://fcm.googleapis.com/v1/projects/bands-d1bc1/messages:send"
-         val jsonBody=JSONObject().apply {
-             put("message",JSONObject().apply {
-                 put("topic", "chatGroup_$chatId")
-                 put("notification",JSONObject().apply {
-                     put("title","New message from $chatId")
-                     put("body","$senderId : $message")
+         db.collection(USER_NODE).document(senderId).get().addOnSuccessListener { document ->
+             val senderName = document.getString("name") ?: "Unknown User"
+             val senderPhone = document.getString("phoneNumber") ?: "Unknown Number"
+             val fcmUrl = "https://fcm.googleapis.com/v1/projects/bands-d1bc1/messages:send"
+             val jsonBody = JSONObject().apply {
+                 put("message", JSONObject().apply {
+                     put("topic", "chatGroup_$chatId")
+                     put("notification", JSONObject().apply {
+                         put("title", "New message from $senderName")
+                         val senderDisplayName = senderName.ifBlank { senderPhone }
+                         put("body", "$senderDisplayName : $message")
+                     })
+                     put("data", JSONObject().apply {
+                         put("senderId", senderId)
+                     })
                  })
-                 put("data", JSONObject().apply {
-                     put("senderId", senderId)
-                 })
-             })
-         }
-         val requestBody=jsonBody.toString()
-         val request= object :StringRequest(Method.POST,fcmUrl,Response.Listener {
-             Log.d("volley","msg send success")
-         },Response.ErrorListener {
-             Log.d("volley","msg send failed: ${it.message}")
-         }){
-             override fun getBody(): ByteArray {
-                 return requestBody.toByteArray()
              }
-
-             override fun getHeaders(): MutableMap<String, String> {
-                val  headers = HashMap<String,String>()
-                 headers["Authorization"] = "Bearer ${getAccessToken()}"
-                 headers["Content-type"] = "application/json"
-                 return headers
+             val requestBody = jsonBody.toString()
+             val request = object : StringRequest(Method.POST, fcmUrl, Response.Listener {
+                 Log.d("volley Notification", "Message sent successfully")
+             }, Response.ErrorListener {
+                 Log.d("volley Notification", "Message send failed: ${it.message}")
+             }) {
+                 override fun getBody(): ByteArray {
+                     return requestBody.toByteArray()
+                 }
+                 override fun getHeaders(): MutableMap<String, String> {
+                     return hashMapOf(
+                         "Authorization" to "Bearer ${getAccessToken()}",
+                         "Content-type" to "application/json"
+                     )
+                 }
              }
+             val queue = Volley.newRequestQueue(context)
+             queue.add(request)
+         }.addOnFailureListener { e ->
+             Log.e("postNotificationToUsers", "Failed to retrieve sender info", e)
          }
-         val queue=Volley.newRequestQueue(context)
-         queue.add(request)
      }
     fun getAccessToken():String{
         val inputStream=context.resources.openRawResource(R.raw.bands_key)
         val googleCreds = GoogleCredentials.fromStream(inputStream)
             .createScoped(listOf("https://www.googleapis.com/auth/firebase.messaging"))
+        googleCreds.refreshIfExpired()
         return googleCreds.refreshAccessToken().tokenValue
 
     }
 
     fun releaseMessages() {
         _chatMessages.value = emptyList()
-        currentChatListener = null
+        currentChatListener?.remove()
+        lastVisibleMessage = null
     }
 
     fun handleException(exception: Exception? = null, customMessage: String? = null) {
@@ -632,9 +667,6 @@ class BandsViewModel @Inject constructor(
 
     fun loadStatuses() {
 //        val statusShowTime = 24L * 60 * 60 * 1000
-//        Log.d("statusShowTime","statusShowTime ${statusShowTime}")
-//        val timeFrame = System.currentTimeMillis() - statusShowTime
-//        Log.d("statusShowTime","timeFrame ${timeFrame}")
         inProgressStatus.value = true
         db.collection(CHATS)
             .where(
@@ -675,7 +707,7 @@ class BandsViewModel @Inject constructor(
                                     val imagesToDelete = mutableListOf<String>()
                                     for (document in value.documents) {
                                         val status = document.toObject(Status::class.java)
-                                        if (status != null && status.timeStamp != null && (currentTime - status.timeStamp) > 5L * 60 * 1000) {
+                                        if (status != null && status.timeStamp != null && (currentTime - status.timeStamp) >  24L * 60 * 60 * 1000) {
                                             statusesToDelete.add(document.reference)
                                             status.imageUrl?.let { imagesToDelete.add(it) }
                                         }

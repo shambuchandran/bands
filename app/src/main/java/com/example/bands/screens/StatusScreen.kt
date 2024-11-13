@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -20,7 +21,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AddCircle
-import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material3.Divider
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -53,7 +53,6 @@ import com.example.bands.utils.CommonStatus
 import com.example.bands.utils.CommonTitleText
 import com.example.bands.utils.navigateTo
 import com.example.bands.weatherupdates.NetworkResponse
-import java.util.concurrent.RecursiveTask
 
 @Composable
 fun StatusScreen(navController: NavController, viewModel: BandsViewModel,weatherViewModel: WeatherViewModel) {
@@ -96,11 +95,11 @@ fun StatusScreen(navController: NavController, viewModel: BandsViewModel,weather
         }
 
         Scaffold(
-            floatingActionButton = {
-                FabStatus {
-                    launcher.launch("image/*")
-                }
-            },
+//            floatingActionButton = {
+//                FabStatus {
+//                    launcher.launch("image/*")
+//                }
+//            },
             content = {
                 Column(
                     modifier = Modifier
@@ -109,15 +108,19 @@ fun StatusScreen(navController: NavController, viewModel: BandsViewModel,weather
                 ) {
                     CommonTitleText(text = stringResource(R.string.happening),weatherData,showSearchBar = false)
                     if (statuses.isEmpty()) {
-                        Column(
+                        Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 //.weight(1f)
                                 .height(108.dp),
-                            verticalArrangement = Arrangement.Center,
-                            horizontalAlignment = Alignment.CenterHorizontally
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Start
                         ) {
-                            Text(text = "No Statuses available")
+                            AddStatusIcon {
+                                launcher.launch("image/*")
+                            }
+                            VerticalDivider(modifier = Modifier.padding(horizontal = 8.dp))
+                            Text(text = "No status to watch",color = Color.White, modifier = Modifier.weight(1f))
                         }
                     } else {
                         LazyRow(
@@ -126,7 +129,6 @@ fun StatusScreen(navController: NavController, viewModel: BandsViewModel,weather
                                 .padding(8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // My Status or Add Icon
                             item {
                                 if (myStatus.isNotEmpty()) {
                                     CommonStatus(
@@ -169,6 +171,7 @@ fun StatusScreen(navController: NavController, viewModel: BandsViewModel,weather
                                 item {
                                     Text(
                                         text = "No status to watch",
+                                        color = Color.White,
                                         modifier = Modifier
                                             .align(Alignment.CenterHorizontally)
                                             .padding(24.dp)
@@ -216,7 +219,7 @@ fun StatusScreen(navController: NavController, viewModel: BandsViewModel,weather
 @Composable
 fun AddStatusIcon(onAddClick: () -> Unit) {
     Column(horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center) {
+        verticalArrangement = Arrangement.Center, modifier = Modifier.padding(8.dp)) {
         Box(
             modifier = Modifier
                 .size(56.dp)
@@ -232,7 +235,7 @@ fun AddStatusIcon(onAddClick: () -> Unit) {
                 modifier = Modifier.size(36.dp)
             )
         }
-        Text(text = "Add", color = Color.White, fontWeight = FontWeight.Bold,modifier = Modifier.padding(top = 8.dp))
+        Text(text = "Add Status", color = Color.White, fontWeight = FontWeight.Bold,modifier = Modifier.padding(top = 8.dp))
     }
 }
 

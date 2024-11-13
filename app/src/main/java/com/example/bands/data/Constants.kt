@@ -7,7 +7,7 @@ const val STATUS ="status"
 const val CALLLOG ="callLog"
 
 object Constant {
-    val apikey="cac92d13a46f4646852141c4a82b189b"
+    val apikey=""
 }
-const val gemApiKey="AIzaSyDSD9TUwZb4lfwcY3pmrnQz5gs20lcVszg"
+const val gemApiKey=""
 

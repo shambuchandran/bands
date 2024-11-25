@@ -1,4 +1,3 @@
-Bands
 Bands is a revolutionary chat application that goes beyond simple communication. It integrates multiple tools and features into a single platform, saving you time and enhancing your daily interactions. Whether you want to chat, share updates, make calls, or stay informed, Bands has it all!
 
 🚀 Features

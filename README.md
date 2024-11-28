@@ -40,3 +40,5 @@ Additional Features: Explore new functionalities to enrich user experience.
 Bands isn't just another app; it’s a solution for everyday communication and convenience. Your feedback and questions are invaluable in helping us make Bands even better. Feel free to share your thoughts and discuss how this app can elevate communication and daily tasks effortlessly.
 
 Thank you for exploring Bands—where connection meets convenience!
+
+Amazon app store link: https://www.amazon.com/gp/product/B0DNXZMKBK

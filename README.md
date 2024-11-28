@@ -41,4 +41,8 @@ Bands isn't just another app; it’s a solution for everyday communication and c
 
 Thank you for exploring Bands—where connection meets convenience!
 
+FIGMA : https://www.figma.com/design/7x1zdxNL0tFAXuYNb4dfj4/BANDS-APP?node-id=0-1&t=U7iogzynO0HW7ils-1
+
+PROTOTYPE: https://www.figma.com/proto/7x1zdxNL0tFAXuYNb4dfj4/BANDS-APP?page-id=0%3A1&node-id=24-66&node-type=canvas&viewport=547%2C1228%2C0.52&t=UfuQlYJqnphqkWBN-1&scaling=scale-down&content-scaling=fixed&starting-point-node-id=24%3A66&share=1
+
 Amazon app store link: https://www.amazon.com/gp/product/B0DNXZMKBK
